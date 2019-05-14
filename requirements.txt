@@ -1,0 +1,12 @@
+numpy
+scipy
+matplotlib
+shapely
+jsonlines
+pandas
+tensorflow
+kfac
+fire
+tensorboard
+sklearn
+torch
