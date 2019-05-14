@@ -166,34 +166,37 @@ class Diagonal(TransformerLayer):
                  pos: bool = False, **kwargs):
         super(Diagonal, self).__init__(units=units, is_complex=is_complex, **kwargs)
         self.output_dim = output_units if output_units is not None else units
+        self.pos = pos
         singular_value_dim = min(self.units, self.output_dim)
         self.sigma = tf.Variable(
             name="sigma",
             initial_value=tf.constant(2 * np.pi * np.random.randn(singular_value_dim), dtype=TF_FLOAT),
             dtype=TF_FLOAT
         )
-        if pos:
-            self.sigma = tf.abs(self.sigma)
-        self.diag_vec = tf.cast(self.sigma, TF_COMPLEX) if is_complex else self.sigma
-        self.inv_diag_vec = tf.cast(1 / self.sigma, TF_COMPLEX) if is_complex else 1 / self.sigma
 
     @tf.function
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:
+        if self.pos:
+            self.sigma = tf.abs(self.sigma)
+        diag_vec = tf.cast(self.sigma, TF_COMPLEX) if self.is_complex else self.sigma
         if self.output_dim == self.units:
-            return self.diag_vec * inputs
+            return diag_vec * inputs
         elif self.output_dim < self.units:
-            return self.diag_vec * inputs[:self.output_dim]
+            return diag_vec * inputs[:self.output_dim]
         else:
-            return tf.pad(self.diag_vec * inputs, tf.constant([[0, 0], [0, self.output_dim - self.units]]))
+            return tf.pad(diag_vec * inputs, tf.constant([[0, 0], [0, self.output_dim - self.units]]))
 
     @tf.function
     def inverse_transform(self, outputs: tf.Tensor) -> tf.Tensor:
+        if self.pos:
+            self.sigma = tf.abs(self.sigma)
+        inv_diag_vec = tf.cast(1 / self.sigma, TF_COMPLEX) if self.is_complex else 1 / self.sigma
         if self.output_dim == self.units:
-            return self.inv_diag_vec * outputs
+            return inv_diag_vec * outputs
         elif self.output_dim > self.units:
-            return self.inv_diag_vec * outputs[:self.units]
+            return inv_diag_vec * outputs[:self.units]
         else:
-            return tf.pad(self.inv_diag_vec * outputs, tf.constant([[0, 0], [0, self.units - self.output_dim]]))
+            return tf.pad(inv_diag_vec * outputs, tf.constant([[0, 0], [0, self.units - self.output_dim]]))
 
 
 class RectangularPerm(PermutationLayer):
