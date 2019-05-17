@@ -4,7 +4,7 @@ The `neurophox` module is an open source machine learning and photonic simulatio
 
 ## Motivation
 
-Orthogonal and unitary neural networks have interesting properties and have been studied for synthetic natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). Furthermore, new energy-efficient photonic technologies are being built to realize such neural networks using light as the computing medium as opposed to conventional analog electronics.
+Orthogonal and unitary neural networks have interesting properties and have been studied for synthetic natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). Furthermore, new energy-efficient photonic technologies are being built to realize unitary mesh-based neural networks using light as the computing medium as opposed to conventional analog electronics.
 
 ## Introduction
 
@@ -38,7 +38,7 @@ There are three options to install `neurophox`:
     pip install -r requirements.txt
     ```
     
-If not installing via `conda`, you'll need to install [PyTorch](https://pytorch.org/) (for future version compatibility) and [Tensorflow 2.0](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf).
+If not installing via `conda`, you'll need to install [PyTorch](https://pytorch.org/) (since PyTorch mesh layers are currently in development) and [Tensorflow 2.0](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf).
 
 If using the `conda` package installation, it is much easier to install GPU dependencies using CUDA 10.0 using the following commands:
 ```bash
@@ -73,10 +73,28 @@ We can inspect the matrix elements implemented by each layer as follows via `tf_
 
 #### Visualize
 
-Matrix visualization works by writing `tf_layer.plot(plt)` or `np_layer.plot(plt)` in a Jupyter notebook.
+Matrix visualization works by running `tf_layer.plot(plt)` or `np_layer.plot(plt)` in a Jupyter notebook.
+
+More interestingly, it is possible to visualize propagation of light in a rectangular or triangular mesh architecture using the `np_layer.propagate` method:
+
+![neurophox](media/rm.png)
+![neurophox](media/tm.png)
+
+The phase shift patterns used to generate the above propagation patterns can also be visualized by plotting `np_layer.phases`:
+
+![neurophox](media/rmcb.png)
+![neurophox](media/tmcb.png)
+
+The code to generate these visualization examples are provided in [neurophox notebooks].
 
 
-More visualization examples are provided in [].
+#### Small machine learning example
+
+It is possible to run `neurophox` models to solve machine learning problems.
+
+![neurophox](media/ml.png)
+
+The code to generate the above example is provided in [neurophox notebooks].
 
 ## Contributions
 
@@ -98,8 +116,17 @@ scipy
 matplotlib
 tensorflow==2.0
 torch==1.1
-tensorboard
 ```
 
-## Authors
+## Authors and citing this repository
 `neurophox` was written by Sunil Pai (email: sunilpai@stanford.edu).
+
+If you find this repository useful, please cite at least one of the following papers depending on your application:
+1. Unitary mesh networks:
+```text
+
+```
+2. Optical nonlinearities:
+```text
+
+```

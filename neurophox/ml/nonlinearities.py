@@ -1,12 +1,13 @@
 import tensorflow as tf
+from ..config import TF_COMPLEX
 
 
 def cnormsq(inputs: tf.Tensor) -> tf.Tensor:
-    return tf.square(tf.math.real(inputs)) + tf.square(tf.math.imag(inputs))
+    return tf.cast(tf.square(tf.math.real(inputs)) + tf.square(tf.math.imag(inputs)), TF_COMPLEX)
 
 
 def cnorm(inputs: tf.Tensor) -> tf.Tensor:
-    return tf.sqrt(tf.square(tf.math.real(inputs)) + tf.square(tf.math.imag(inputs)))
+    return tf.cast(tf.sqrt(tf.square(tf.math.real(inputs)) + tf.square(tf.math.imag(inputs))), TF_COMPLEX)
 
 
 def modrelu(inputs: tf.Tensor, bias: tf.Tensor) -> tf.Tensor:
@@ -31,3 +32,7 @@ def crelu(inputs: tf.Tensor) -> tf.Tensor:
         tf.nn.relu(tf.math.imag(inputs))
     )
 
+
+def intensity_phase_modulation(inputs: tf.Tensor) -> tf.Tensor:
+    inputs_abs = cnorm(inputs)
+    return inputs * tf.complex(tf.cos(inputs_abs), tf.sin(inputs_abs))

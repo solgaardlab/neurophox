@@ -3,4 +3,3 @@ scipy
 matplotlib
 tensorflow==2.0
 torch==1.1
-tensorboard
