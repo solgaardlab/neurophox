@@ -20,19 +20,19 @@ There are three options to install `neurophox`:
 1. Installation via `conda` (must be in a dedicated conda environment!) for Linux and Mac OS targets.
 
     GPU version:
-    ```angular2html
+    ```bash
     conda install -c sunilpai neurophox-gpu
     ```
     CPU version:
-    ```angular2html
+    ```bash
     conda install -c sunilpai neurophox
     ```
 2. Installation via `pip` (all other dependencies installed manually).
-    ```angular2html
+    ```bash
     pip install neurophox
     ```
 3. Installation from source via `pip`.
-    ```angular2html
+    ```bash
     git clone https://github.com/solgaardlab/neurophox
     pip install -e .
     pip install -r requirements.txt
@@ -41,10 +41,48 @@ There are three options to install `neurophox`:
 If not installing via `conda`, you'll need to install [PyTorch](https://pytorch.org/) (for future version compatibility) and [Tensorflow 2.0](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf).
 
 If using the `conda` package installation, it is much easier to install GPU dependencies using CUDA 10.0 using the following commands:
-```angular2html
+```bash
 conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
 pip install tensorflow-gpu==2.0.0-alpha0
 ```
+
+### Examples
+
+####Imports
+
+```python
+from neurophox.numpy import RMNumpy
+from neurophox.tensorflow import RM
+import matplotlib.pyplot as plt
+
+N = 16
+
+tf_layer = RM(N)
+np_layer = RMNumpy(N, phases=tf_layer.phases)
+```
+
+#### Inspection
+
+We can inspect the parameters $\theta_{n\ell}, \phi_{n\ell}$ for each layer using `neurophox.control.MeshPhases`:
+```python
+phases = tf_layer.phases
+phases.theta.param  # raw values of theta
+phases.theta.checkerboard_arrangement  # values of theta arranged in checkerboard, useful for RM, TM layers only
+phases.theta.single_mode_arrangement  # values of theta arranged in striped pattern (single-mode arrangement)
+```
+
+
+We can inspect the matrix elements of $U$ implemented by each layer as follows: 
+
+```python
+np.allclose(np_layer.transform(np.eye(N)), np_layer.matrix)  # True
+np.allclose(tf_layer.transform(np.eye(N)), tf_layer.matrix)  # True
+np.allclose(np_layer.matrix, tf_layer.matrix)  # True
+```
+
+#### Visualize
+
+
 
 ## Contributions
 
@@ -60,7 +98,7 @@ Some important requirements for `neurophox` are:
 3. PyTorch 1.1
 
 The dependencies for `neurophox` (specified in `requirements.txt`) are:
-```angular2html
+```text
 numpy
 scipy
 matplotlib
