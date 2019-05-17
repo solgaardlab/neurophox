@@ -123,10 +123,20 @@ torch==1.1
 
 If you find this repository useful, please cite at least one of the following papers depending on your application:
 1. Unitary mesh networks:
-```text
-
-```
-2. Optical nonlinearities:
-```text
-
-```
+    ```text
+    @article{pai2018matrix,
+      title={Matrix optimization on universal unitary photonic devices},
+      author={Pai, Sunil and Bartlett, Ben and Solgaard, Olav and Miller, David AB},
+      journal={arXiv preprint arXiv:1808.00458},
+      year={2018}
+    }
+    ```
+2. Optical neural network nonlinearities:
+    ```text
+    @article{williamson2019reprogrammable,
+      title={Reprogrammable Electro-Optic Nonlinear Activation Functions for Optical Neural Networks},
+      author={Williamson, Ian A.D. and Hughes, Tyler W. and Minkov, Momchil and Bartlett, Ben and Pai, Sunil and Fan, Shanhui},
+      journal={arXiv preprint arXiv:1903.04579},
+      year={2019}
+    }
+    ```
