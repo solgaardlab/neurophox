@@ -99,16 +99,16 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
             return inputs.take(inverse_permutation(self.perm_idx), axis=-1)
 
 
-class Mesh:
+class MeshNumpy:
     def __init__(self, model: MeshModel):
         """
         Args:
-            model: MeshModel to define the overall mesh structure (via perm_idx and mask)
+            model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
         """
         self.model = model
         self.units, self.num_layers = self.model.units, self.model.num_layers
 
-    def mesh_layers(self, phases: MeshPhases, use_different_errors=False):
+    def mesh_layers(self, phases: MeshPhases, use_different_errors=False) -> List[MeshVerticalNumpyLayer]:
         mesh_layers = []
         internal_phases = phases.internal_phase_shifts
         external_phases = phases.external_phase_shifts
@@ -168,11 +168,11 @@ class MeshNumpyLayer(TransformerNumpyLayer):
     """Mesh network layer for unitary operators implemented in numpy
 
     Args:
-        mesh_model: The model of the mesh network (e.g., rectangular, triangular, butterfly)
+        mesh_model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
         phases: The MeshPhases control parameters for the mesh
     """
     def __init__(self, mesh_model: MeshModel, phases: Optional[MeshPhases]=None):
-        self.mesh = Mesh(mesh_model)
+        self.mesh = MeshNumpy(mesh_model)
         if phases is None:
             self.theta, self.phi, self.gamma = mesh_model.init()
         else:

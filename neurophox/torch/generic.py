@@ -76,8 +76,7 @@ class PermutationLayer(TransformerLayer):
     """Permutation layer
 
     Args:
-        scope_name: Name of the scope to define variables being run (to distinguish from other transformers in tensorflow graph)
-        units: Dimension of the input to be transformed by the transformer
+        permuted_indices: Name of the scope to define variables being run (to distinguish from other transformers in tensorflow graph)
     """
     def __init__(self, permuted_indices: np.ndarray):
         super(PermutationLayer, self).__init__(units=len(permuted_indices))

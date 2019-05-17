@@ -108,7 +108,7 @@ def to_stripe_torch(tensor: torch.Tensor, units: int):
     return tensor_t
 
 
-def to_rd_checkerboard_torch(tensor_0: torch.Tensor, tensor_1: torch.Tensor):
+def to_rm_checkerboard_torch(tensor_0: torch.Tensor, tensor_1: torch.Tensor):
     """A general method to convert even/odd (0/1 parity) arrays of values into checkerboard tensors.
     This is a critical component of rectangular mesh simulations. Note that this method is much simpler than
     the tensorflow version.

@@ -53,7 +53,7 @@ class LinearOpticalComponent:
         if n is None:
             n = m + 1
         if not m < n:
-            raise Exception('Require m < n')
+            raise ValueError('Require m < n')
         unitary = self.matrix
         givens_rotation = np.eye(units, dtype=self.dtype)
         givens_rotation[m][m] = unitary[0, 0] * (-i_factor * 1j + (1 - i_factor))
@@ -81,7 +81,7 @@ class LinearOpticalComponent:
         if n is None:
             n = m + 1
         if not m < n:
-            raise Exception('Require m < n')
+            raise ValueError('Require m < n')
         transformed_vector = input_vector
         transformed_coordinates = self.matrix @ np.asarray([input_vector[m], input_vector[n]], dtype=self.dtype)
         transformed_vector[m] = transformed_coordinates[0]

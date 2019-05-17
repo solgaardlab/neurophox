@@ -4,14 +4,30 @@ import tensorflow as tf
 from .helpers import butterfly_permutation, grid_permutation, to_stripe_array, prm_permutation, \
     get_efficient_coarse_grain_block_sizes, get_default_coarse_grain_block_sizes
 from .initializers import get_initializer
-from .config import BLOCH, SINGLEMODE, GLOBAL_SEED, TF_COMPLEX, NUMPY, TFKERAS
+from .config import BLOCH, GLOBAL_SEED, TF_COMPLEX, NUMPY, TFKERAS
 
 
 class MeshModel:
     def __init__(self, perm_idx: np.ndarray, hadamard: bool = False, num_mzis: Optional[np.ndarray] = None,
                  bs_error: float = 0.0, bs_error_seed: int = GLOBAL_SEED, use_different_errors: bool = False,
                  theta_init_name: str = "random_theta", phi_init_name: str = "random_phi",
-                 gamma_init_name: str = "random_gamma", basis: str = SINGLEMODE):
+                 gamma_init_name: str = "random_gamma", basis: str = BLOCH):
+        """
+        Any feedforward mesh model of :math:`N` inputs/outputs and `L` layers.
+
+        Args:
+            perm_idx: A numpy array of :math:`N \times L` permutation indices for all layers of the mesh
+            hadamard: Whether to use Hadamard convention
+            num_mzis: A numpy array of :math:`L` integers, where for layer :math:`\ell`,
+            :math:`M_\ell \leq \lfloor N / 2\rfloor`, used to defined the phase shift mask.
+            bs_error: Beamsplitter error (ignore for pure machine learning applications)
+            bs_error_seed: Seed for randomizing beamsplitter error (ignore for pure machine learning applications)
+            use_different_errors: Use different errors for the left and right beamsplitter errors
+            theta_init_name: Initializer name for theta
+            phi_init_name: Initializer name for phi
+            gamma_init_name: Initializer name for gamma
+            basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
+        """
         self.units = perm_idx.shape[1]
         self.num_layers = perm_idx.shape[0] - 1
         self.perm_idx = perm_idx
@@ -37,6 +53,15 @@ class MeshModel:
 
     def init(self, backend: str = NUMPY) -> Union[Tuple[np.ndarray, np.ndarray, np.ndarray],
                                                   Tuple[tf.Variable, tf.Variable, tf.Variable]]:
+        """
+
+        Args:
+            backend: Whether to use Numpy, Tensorflow, or PyTorch (not yet supported, will throw error).
+
+        Returns:
+            Numpy arrays or Tensorflow variables corresponding to :math:`\theta_{n\ell}, \phi_{n\ell}, \gamma_n`.
+
+        """
         theta_init = get_initializer(self.units, self.num_layers, self.theta_init_name, self.hadamard)
         phi_init = get_initializer(self.units, self.num_layers, self.phi_init_name, self.hadamard)
         gamma_init = get_initializer(self.units, self.num_layers, self.gamma_init_name, self.hadamard)
@@ -54,7 +79,12 @@ class MeshModel:
         return np.random.randn(self.num_layers, self.units // 2) * self.bs_error * mask
 
     @property
-    def mzi_error_matrices(self):
+    def mzi_error_matrices(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+
+        Returns:
+            Error numpy arrays for Numpy `MeshLayer`
+        """
         if self.bs_error_seed is not None:
             np.random.seed(self.bs_error_seed)
         mask = self.mask if self.mask is not None else np.ones((self.num_layers, self.units // 2))
@@ -68,7 +98,12 @@ class MeshModel:
         return e_l, e_r
 
     @property
-    def mzi_error_tensors(self):
+    def mzi_error_tensors(self) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
+        """
+
+        Returns:
+            Error tensors for Tensorflow `MeshLayer`
+        """
         e_l, e_r = self.mzi_error_matrices
 
         enn = to_stripe_array(np.sqrt(1 - e_l) * np.sqrt(1 - e_r), self.units)
@@ -129,8 +164,7 @@ class PermutingRectangularMeshModel(MeshModel):
 
     Args:
         units: The dimension of the unitary matrix (:math:`N`) to be modeled by this transformer
-        tunable_layers_per_block: The number of tunable layers per block
-        (overrides `num_tunable_layers_list`, `sampling_frequencies`)
+        tunable_layers_per_block: The number of tunable layers per block (overrides `num_tunable_layers_list`, `sampling_frequencies`)
         num_tunable_layers_list: Number of tunable layers in each block in order from left to right
         sampling_frequencies: Frequencies of sampling frequencies between the tunable layers
         bs_error: Photonic error in the beamsplitter

@@ -131,23 +131,18 @@ class MeshVerticalLayer(TransformerLayer):
 class Mesh:
     def __init__(self, model: MeshModel):
         """
-        General mesh network layer defined by MeshModel
+        General mesh network layer defined by `neurophox.meshmodel.MeshModel`
 
         Args:
-            model: MeshModel to define the overall mesh structure and errors
+            model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
         """
         self.model = model
         self.units, self.num_layers = self.model.units, self.model.num_layers
         self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
-        self.e_l = self.model.get_bs_error_matrix(right=False)
-        if self.model.use_different_errors:
-            self.e_r = self.model.get_bs_error_matrix(right=True)
-        else:
-            self.e_r = self.e_l
         self.enn, self.enp, self.epn, self.epp = self.model.mzi_error_tensors
         self.perm_layers = [PermutationLayer(self.model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
-    def mesh_layers(self, phases: MeshPhasesTensorflow):
+    def mesh_layers(self, phases: MeshPhasesTensorflow) -> List[MeshVerticalLayer]:
         internal_psl = phases.internal_phase_shift_layers
         external_psl = phases.external_phase_shift_layers
         # smooth trick to efficiently perform the layerwise coupling computation
@@ -184,7 +179,8 @@ class MeshLayer(TransformerLayer):
     """Mesh network layer for unitary operators implemented in numpy
 
     Args:
-        mesh_model: The model of the mesh network (e.g., rectangular, triangular, butterfly)
+        mesh_model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
+        activation: Nonlinear activation function (None if there's no nonlinearity)
     """
 
     def __init__(self, mesh_model: MeshModel,  activation: tf.keras.layers.Activation = None,

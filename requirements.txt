@@ -1,12 +1,6 @@
 numpy
 scipy
 matplotlib
-shapely
-jsonlines
-pandas
-tensorflow
-kfac
-fire
+tensorflow==2.0
+torch==1.1
 tensorboard
-sklearn
-torch

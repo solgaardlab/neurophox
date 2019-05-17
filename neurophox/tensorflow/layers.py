@@ -131,15 +131,16 @@ class DiagonalPhaseLayer(TransformerLayer):
     """Diagonal matrix of phase shifts
 
     Args:
-        units: Dimension of the input to be transformed by the transformer
+        units: Dimension of the input (number of input waveguide ports), :math:`N`
     """
 
-    def __init__(self, units: int):
+    def __init__(self, units: int, **kwargs):
         super(DiagonalPhaseLayer, self).__init__(units=units)
         self.gamma = tf.Variable(
             name="gamma",
             initial_value=tf.constant(2 * np.pi * np.random.rand(units), dtype=TF_FLOAT),
-            dtype=TF_FLOAT
+            dtype=TF_FLOAT,
+            **kwargs
         )
         self.diag_vec = tf.complex(tf.cos(self.gamma), tf.sin(self.gamma))
         self.inv_diag_vec = tf.complex(tf.cos(-self.gamma), tf.sin(-self.gamma))
@@ -158,8 +159,11 @@ class Diagonal(TransformerLayer):
     """Diagonal matrix of gains and losses (not necessarily real)
 
     Args:
-        units: Dimension of the input to be transformed by the transformer
+        units: Dimension of the input (number of input waveguide ports), :math:`N`
         is_complex: Whether to use complex values or not
+        output_units: Dimension of the output (number of output waveguide ports), :math:`M`.
+        If :math:`M < N`, remove last :math:`N - M` elements. If :math:`M > N`, pad with :math:`M - N` zeros.
+        pos: Enforce positive definite matrix (only positive singular values)
     """
 
     def __init__(self, units: int, is_complex: bool = True, output_units: Optional[int] = None,
@@ -176,9 +180,8 @@ class Diagonal(TransformerLayer):
 
     @tf.function
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:
-        if self.pos:
-            self.sigma = tf.abs(self.sigma)
-        diag_vec = tf.cast(self.sigma, TF_COMPLEX) if self.is_complex else self.sigma
+        sigma = tf.abs(self.sigma) if self.pos else self.sigma
+        diag_vec = tf.cast(sigma, TF_COMPLEX) if self.is_complex else sigma
         if self.output_dim == self.units:
             return diag_vec * inputs
         elif self.output_dim < self.units:
@@ -188,9 +191,8 @@ class Diagonal(TransformerLayer):
 
     @tf.function
     def inverse_transform(self, outputs: tf.Tensor) -> tf.Tensor:
-        if self.pos:
-            self.sigma = tf.abs(self.sigma)
-        inv_diag_vec = tf.cast(1 / self.sigma, TF_COMPLEX) if self.is_complex else 1 / self.sigma
+        sigma = tf.abs(self.sigma) if self.pos else self.sigma
+        inv_diag_vec = tf.cast(1 / sigma, TF_COMPLEX) if self.is_complex else 1 / sigma
         if self.output_dim == self.units:
             return inv_diag_vec * outputs
         elif self.output_dim > self.units:
@@ -203,7 +205,8 @@ class RectangularPerm(PermutationLayer):
     """Rectangular permutation layer
 
     Args:
-        units: Dimension of the input to be transformed by the transformer
+        units: Dimension of the input (number of input waveguide ports), :math:`N`
+        frequency: Frequency of interacting mesh wires (waveguides)
         parity_odd: Whether to start sampling up (even parity means start sampling down)
     """
 
@@ -217,8 +220,8 @@ class ButterflyPerm(PermutationLayer):
     """Butterfly (FFT) permutation layer
 
     Args:
-        units: Dimension of the input to be transformed by the transformer
-        frequency: Sample frequency for the permutation transformer
+        units: Dimension of the input (number of input waveguide ports), :math:`N`
+        frequency: Frequency of interacting mesh wires (waveguides)
     """
 
     def __init__(self, units: int, frequency: int):
