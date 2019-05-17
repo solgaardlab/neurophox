@@ -1,11 +1,64 @@
-from typing import Optional
+from typing import Optional, Callable, Tuple
 
 import numpy as np
 import tensorflow as tf
 import torch
+from .components import BlochMZI
 from scipy.stats import multivariate_normal
 
 from .config import NP_FLOAT, TF_FLOAT
+
+
+def clements_decomposition(unitary: np.ndarray, hadamard: bool=False,
+                           pbar_handle: Callable = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+
+    Args:
+        unitary: unitary matrix :math:`U` to be decomposed into pairwise operators.
+        hadamard: Whether to use Hadamard convention
+        pbar_handle: Useful for larger matrices
+
+    Returns:
+        Clements decomposition of `unitary` :math:`U`.
+
+    """
+    hadamard = hadamard
+    unitary_hat = np.copy(unitary)
+    units = unitary.shape[0]
+    # odd and even layer dimensions
+    theta_checkerboard = np.zeros_like(unitary, dtype=NP_FLOAT)
+    phi_checkerboard = np.zeros_like(unitary, dtype=NP_FLOAT)
+    iterator = pbar_handle(range(units - 1)) if pbar_handle else range(units - 1)
+    for i in iterator:
+        if i % 2 == 0:
+            for j in range(i + 1):
+                pairwise_index = i - j
+                target_row, target_col = units - j - 1, i - j
+                m, n = units - 1 - target_row, units - 1 - target_col
+                theta = np.arctan(np.abs(
+                    unitary_hat[target_row, target_col] / unitary_hat[target_row, target_col + 1])) * 2 + np.pi
+                phi = np.angle(
+                    unitary_hat[target_row, target_col] / unitary_hat[target_row, target_col + 1])
+                mzi = BlochMZI(theta, phi, hadamard=hadamard, dtype=np.complex128)
+                right_multiplier = mzi.givens_rotation(units=units, m=pairwise_index, i_factor=True)
+                unitary_hat = unitary_hat @ right_multiplier.conj().T
+                theta_checkerboard[m, n - 1] = theta
+                phi_checkerboard[m, n - 1] = phi
+        else:
+            for j in range(i + 1):
+                pairwise_index = units + j - i - 2
+                target_row, target_col = units + j - i - 1, j
+                m, n = target_row, target_col
+                theta = np.arctan(np.abs(unitary_hat[target_row, target_col] / unitary_hat[target_row - 1, target_col])) * 2 + np.pi
+                phi = np.angle(-unitary_hat[target_row, target_col] / unitary_hat[target_row - 1, target_col])
+                mzi = BlochMZI(theta, phi, hadamard=hadamard, dtype=np.complex128)
+                left_multiplier = mzi.givens_rotation(units=units, m=pairwise_index, i_factor=True)
+                unitary_hat = left_multiplier @ unitary_hat
+                theta_checkerboard[m, n] = theta
+                phi_checkerboard[m, n] = phi
+    theta_checkerboard = to_absolute_theta(theta_checkerboard).T
+    phi_checkerboard = np.mod(phi_checkerboard, 2 * np.pi)
+    return theta_checkerboard, phi_checkerboard, np.diag(unitary_hat)  # not quite the same as the model in MeshPhases
 
 
 def to_absolute_theta_tf(theta: tf.Tensor) -> tf.Tensor:

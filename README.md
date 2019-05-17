@@ -48,41 +48,35 @@ pip install tensorflow-gpu==2.0.0-alpha0
 
 ### Examples
 
-####Imports
+#### Imports
 
 ```python
+import numpy as np
 from neurophox.numpy import RMNumpy
 from neurophox.tensorflow import RM
-import matplotlib.pyplot as plt
 
 N = 16
 
 tf_layer = RM(N)
 np_layer = RMNumpy(N, phases=tf_layer.phases)
+
+np.allclose(tf_layer.matrix, np_layer.matrix)  # True
 ```
 
 #### Inspection
 
-We can inspect the parameters $\theta_{n\ell}, \phi_{n\ell}$ for each layer using `neurophox.control.MeshPhases`:
-```python
-phases = tf_layer.phases
-phases.theta.param  # raw values of theta
-phases.theta.checkerboard_arrangement  # values of theta arranged in checkerboard, useful for RM, TM layers only
-phases.theta.single_mode_arrangement  # values of theta arranged in striped pattern (single-mode arrangement)
-```
+We can inspect the parameters for each layer using `neurophox.control.MeshPhases` which can be accessed via `tf_layer.phases` and `np_layer.phases`.
 
 
-We can inspect the matrix elements of $U$ implemented by each layer as follows: 
+We can inspect the matrix elements implemented by each layer as follows via `tf_layer.matrix` and `np_layer.matrix`.
 
-```python
-np.allclose(np_layer.transform(np.eye(N)), np_layer.matrix)  # True
-np.allclose(tf_layer.transform(np.eye(N)), tf_layer.matrix)  # True
-np.allclose(np_layer.matrix, tf_layer.matrix)  # True
-```
 
 #### Visualize
 
+Matrix visualization works by writing `tf_layer.plot(plt)` or `np_layer.plot(plt)` in a Jupyter notebook.
 
+
+More visualization examples are provided in [].
 
 ## Contributions
 
