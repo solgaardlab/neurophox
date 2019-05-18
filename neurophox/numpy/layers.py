@@ -97,7 +97,7 @@ class PRMNumpy(MeshNumpyLayer):
         phi_init_name: Initializer name for phi
     """
 
-    def __init__(self, units: int, tunable_layers_per_block: int = None,
+    def __init__(self, units: int, phases: Optional[MeshPhases] = None, tunable_layers_per_block: int = None,
                  num_tunable_layers_list: Optional[List[int]] = None, sampling_frequencies: Optional[List[int]] = None,
                  bs_error: float = 0.0, hadamard: bool = False, theta_init_name: Optional[str] = 'haar_prm',
                  phi_init_name: Optional[str] = 'random_phi'):
@@ -106,5 +106,5 @@ class PRMNumpy(MeshNumpyLayer):
         super(PRMNumpy, self).__init__(
             PermutingRectangularMeshModel(units, tunable_layers_per_block, num_tunable_layers_list,
                                           sampling_frequencies, bs_error, hadamard,
-                                          theta_init_name, phi_init_name)
+                                          theta_init_name, phi_init_name), phases
         )

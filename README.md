@@ -2,13 +2,15 @@
 
 The `neurophox` module is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf) and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
 
+![neurophox](https://giant.gfycat.com/AssuredLimitedCaecilian.webm)
+
 ## Motivation
 
 Orthogonal and unitary neural networks have interesting properties and have been studied for synthetic natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). Furthermore, new energy-efficient photonic technologies are being built to realize unitary mesh-based neural networks using light as the computing medium as opposed to conventional analog electronics.
 
 ## Introduction
 
-`neurophox` provides a robust and general framework for mesh network implementations of orthogonal and unitary neural networks. We use an efficient definition for any feedforward mesh architecture, `neurophox.meshmodel.MeshModel`, to develop mesh layer architectures in Numpy (`neurophox.numpy.layers`), Tensorflow 2 (`neurophox.tensorflow.layers`), and (soon) PyTorch.
+`neurophox` provides a robust and general framework for mesh network layers in orthogonal and unitary neural networks. We use an efficient definition for any feedforward mesh architecture, `neurophox.meshmodel.MeshModel`, to develop mesh layer architectures in Numpy (`neurophox.numpy.layers`), Tensorflow 2 (`neurophox.tensorflow.layers`), and (soon) PyTorch.
 
 Scattering matrix models used in unitary mesh networks for photonics simulations are provided in `neurophox.components`. The models for all layers are fully defined in `neurophox.meshmodel`, which provides a general framework for efficient implementation of any unitary mesh network.
 
@@ -46,9 +48,7 @@ conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
 pip install tensorflow-gpu==2.0.0-alpha0
 ```
 
-### Examples
-
-#### Imports
+### Imports
 
 ```python
 import numpy as np
@@ -61,36 +61,41 @@ tf_layer = RM(N)
 np_layer = RMNumpy(N, phases=tf_layer.phases)
 
 np.allclose(tf_layer.matrix, np_layer.matrix)  # True
+np.allclose(tf_layer(np.eye(N)), np_layer.matrix)  # True
 ```
 
-#### Inspection
+### Inspection
 
 We can inspect the parameters for each layer using `neurophox.control.MeshPhases` which can be accessed via `tf_layer.phases` and `np_layer.phases`.
 
 
 We can inspect the matrix elements implemented by each layer as follows via `tf_layer.matrix` and `np_layer.matrix`.
 
-
-#### Visualize
-
-Matrix visualization works by running `tf_layer.plot(plt)` or `np_layer.plot(plt)` in a Jupyter notebook.
-
-More interestingly, it is possible to visualize propagation of light in a rectangular or triangular mesh architecture using the `np_layer.propagate` method:
-
-![neurophox](media/rm.png)
-![neurophox](media/tm.png)
-
+### Phase shift settings visualization
 The phase shift patterns used to generate the above propagation patterns can also be visualized by plotting `np_layer.phases`:
 
+Rectangular mesh:
 ![neurophox](media/rmcb.png)
+Triangular mesh:
 ![neurophox](media/tmcb.png)
+
+
+### Light propagation visualization
+
+For the phase shift settings above, we can visualize the propagation of light (field magnitude), as the data "flows" through the mesh.
+
+Rectangular mesh:
+![neurophox](media/rmprop.png)
+Triangular mesh:
+![neurophox](media/tmprop.png)
+
 
 The code to generate these visualization examples are provided in [neurophox notebooks].
 
 
 #### Small machine learning example
 
-It is possible to run `neurophox` models to solve machine learning problems.
+It is possible to compose `neurophox` Tensorflow layers into unitary neural networks using `Sequential` to solve machine learning problems.
 
 ![neurophox](media/ml.png)
 
@@ -98,7 +103,7 @@ The code to generate the above example is provided in [neurophox notebooks].
 
 ## Contributions
 
-The module is under development and is not yet stable. We welcome pull requests and contributions from the broader community.
+`neurophox` is under development and is not yet stable. We welcome pull requests and contributions from the broader community.
 
 If you would like to contribute, please submit a pull request. If you find a bug, please submit an issue on Github.
 
