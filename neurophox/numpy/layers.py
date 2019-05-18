@@ -27,13 +27,33 @@ class RMNumpy(MeshNumpyLayer):
                                  theta_init_name, phi_init_name, gamma_init_name), phases
         )
 
-    def propagate(self, inputs: np.ndarray) -> np.ndarray:
-        outputs = inputs * self.phases.input_phase_shift_layer
-        fields = np.zeros((self.num_layers + 1, *outputs.shape), dtype=NP_COMPLEX)
-        fields[0] = outputs
-        for layer in range(self.num_layers):
-            outputs = self.mesh_layers[layer].transform(outputs)
-            fields[layer + 1] = np.roll(outputs, 1, 1) if layer % 2 else outputs
+    def propagate(self, inputs: np.ndarray, explicit=False) -> np.ndarray:
+        if explicit:
+            outputs = inputs * self.phases.input_phase_shift_layer
+            fields = np.zeros((4 * self.num_layers + 1, *outputs.shape), dtype=NP_COMPLEX)
+            fields[0] = outputs
+            for layer in range(self.num_layers):
+                if layer > 0:
+                    outputs = np.roll(outputs, -1, 1) if layer % 2 else np.roll(outputs, 1, 1)
+                # first coupling event
+                outputs = self.beamsplitter_layers_l[layer].transform(outputs)
+                fields[4 * layer + 1] = np.roll(outputs, 1, 1) if layer % 2 else outputs
+                # phase shift event
+                outputs = outputs * self.internal_phase_shift_layers[layer]
+                fields[4 * layer + 2] = np.roll(outputs, 1, 1) if layer % 2 else outputs
+                # second coupling event
+                outputs = self.beamsplitter_layers_r[layer].transform(outputs)
+                fields[4 * layer + 3] = np.roll(outputs, 1, 1) if layer % 2 else outputs
+                # phase shift event
+                outputs = outputs * self.external_phase_shift_layers[layer]
+                fields[4 * layer + 4] = np.roll(outputs, 1, 1) if layer % 2 else outputs
+        else:
+            outputs = inputs * self.phases.input_phase_shift_layer
+            fields = np.zeros((self.num_layers + 1, *outputs.shape), dtype=NP_COMPLEX)
+            fields[0] = outputs
+            for layer in range(self.num_layers):
+                outputs = self.mesh_layers[layer].transform(outputs)
+                fields[layer + 1] = np.roll(outputs, 1, 1) if layer % 2 else outputs
         return fields
 
     def inverse_propagate(self, outputs: np.ndarray) -> np.ndarray:

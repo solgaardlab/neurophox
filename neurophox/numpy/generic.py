@@ -75,7 +75,7 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
         self.tunable_layer = tunable_layer
         self.perm_idx = perm_idx
         self.right_perm_idx = right_perm_idx
-        self.inv_right_perm_idx = inverse_permutation(perm_idx)
+        self.inv_right_perm_idx = inverse_permutation(perm_idx) if self.perm_idx is not None else None
         super(MeshVerticalNumpyLayer, self).__init__(self.tunable_layer.shape[0])
 
     def transform(self, inputs: np.ndarray):
@@ -181,6 +181,7 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         self.internal_phase_shift_layers = self.phases.internal_phase_shift_layers.T
         self.external_phase_shift_layers = self.phases.external_phase_shift_layers.T
         self.mesh_layers = self.mesh.mesh_layers(self.phases)
+        self.beamsplitter_layers_l, self.beamsplitter_layers_r = self.mesh.beamsplitter_layers()
         super(MeshNumpyLayer, self).__init__(self.units)
 
     def transform(self, inputs: np.ndarray) -> np.ndarray:
