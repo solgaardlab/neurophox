@@ -1,8 +1,8 @@
-# ![neurophox](media/logo.png)
+# ![neurophox](https://user-images.githubusercontent.com/7623867/57964848-ae1b0000-78f0-11e9-8cc8-a9ba628c3a89.png)
 
 The `neurophox` module is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf) and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
 
-![neurophox-1](https://user-images.githubusercontent.com/7623867/57964658-87a79580-78ed-11e9-8f1e-c4af30c32e65.gif)
+![neurophox](https://user-images.githubusercontent.com/7623867/57964658-87a79580-78ed-11e9-8f1e-c4af30c32e65.gif)
 
 ## Motivation
 
@@ -75,9 +75,9 @@ We can inspect the matrix elements implemented by each layer as follows via `tf_
 The phase shift patterns used to generate the above propagation patterns can also be visualized by plotting `np_layer.phases`:
 
 Rectangular mesh:
-![neurophox](media/rmcb.png)
+![neurophox](https://user-images.githubusercontent.com/7623867/57964850-aeb39680-78f0-11e9-8785-e6e46c705b34.png)
 Triangular mesh:
-![neurophox](media/tmcb.png)
+![neurophox](https://user-images.githubusercontent.com/7623867/57964852-aeb39680-78f0-11e9-8a5c-d08e9f6dce89.png)
 
 
 ### Light propagation visualization
@@ -85,9 +85,9 @@ Triangular mesh:
 For the phase shift settings above, we can visualize the propagation of light (field magnitude), as the data "flows" through the mesh.
 
 Rectangular mesh:
-![neurophox](media/rmprop.png)
+![neurophox](https://user-images.githubusercontent.com/7623867/57964851-aeb39680-78f0-11e9-9ff3-41e8cebd25a6.png)
 Triangular mesh:
-![neurophox](media/tmprop.png)
+![neurophox](https://user-images.githubusercontent.com/7623867/57964853-aeb39680-78f0-11e9-8cd4-1364d2cec339.png)
 
 
 The code to generate these visualization examples are provided in [neurophox notebooks].
@@ -97,7 +97,7 @@ The code to generate these visualization examples are provided in [neurophox not
 
 It is possible to compose `neurophox` Tensorflow layers into unitary neural networks using `Sequential` to solve machine learning problems.
 
-![neurophox](media/ml.png)
+![neurophox](https://user-images.githubusercontent.com/7623867/57964849-ae1b0000-78f0-11e9-941f-92682ad460c8.png)
 
 The code to generate the above example is provided in [neurophox notebooks].
 
