@@ -2,7 +2,7 @@
 
 The `neurophox` module is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf) and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
 
-![neurophox](https://giant.gfycat.com/AssuredLimitedCaecilian.webm)
+![neurophox-1](https://user-images.githubusercontent.com/7623867/57964658-87a79580-78ed-11e9-8f1e-c4af30c32e65.gif)
 
 ## Motivation
 
