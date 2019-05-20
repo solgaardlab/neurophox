@@ -5,13 +5,19 @@ import numpy as np
 from ..config import NP_COMPLEX
 
 
-class LinearOpticalComponent:
-    """Two-port unitary linear optical component (unitary scattering matrix for waveguide modal interaction)
+class PairwiseUnitary:
+    """Pairwise unitary
+
+    This can be considered also a two-port unitary linear optical component
+    (e.g. unitary scattering matrix for waveguide modal interaction).
 
     Notes:
         By default, this class uses the identity matrix as the unitary
         and implements the transform and givens rotation on an input
         given whatever unitary definition is specified in the constructor
+
+    Args:
+        dtype: Cast values as `dtype` for this pairwise unitary operator
 
     """
     def __init__(self, dtype=NP_COMPLEX):
@@ -19,15 +25,30 @@ class LinearOpticalComponent:
 
     @property
     def reflection_coefficient(self):
-        return 1
+        """
+
+        Returns:
+            Reflection coefficient, :math:`r`, or reflectivity of :math:`2 \\times 2` transfer matrix
+        """
+        raise NotImplementedError("Need to override this method in child class.")
 
     @property
     def transmission_coefficient(self):
-        return 0
+        """
+
+        Returns:
+            Transmission coefficient, :math:`t`, or transmissivity of :math:`2 \\times 2` transfer matrix
+        """
+        raise NotImplementedError("Need to override this method in child class.")
 
     @property
     def matrix(self):
-        return np.eye(2, dtype=self.dtype)
+        """
+
+        Returns:
+            :math:`U_2`, a :math:`2 \\times 2` unitary matrix implemented by this component
+        """
+        raise NotImplementedError("Need to override this method in child class.")
 
     @property
     def inverse_matrix(self):
@@ -89,13 +110,35 @@ class LinearOpticalComponent:
         return transformed_vector
 
 
-class Beamsplitter(LinearOpticalComponent):
-    """Ideal 50/50 beamsplitter (L)
+class Beamsplitter(PairwiseUnitary):
+    """Ideal 50/50 beamsplitter
 
     Implements the Hadamard or beamsplitter operator.
 
+    Hadamard transformation, :math:`H`:
+
+    .. math::
+        H = \\frac{1}{\sqrt{2}}\\begin{bmatrix} 1 & 1\\\ 1 & -1 \\end{bmatrix}
+
+    Beamsplitter transformation :math:`B`:
+
+    .. math::
+        B = \\frac{1}{\sqrt{2}}\\begin{bmatrix} 1 & i\\\ i & 1 \\end{bmatrix}
+
+    Hadamard transformation, :math:`H_\epsilon` (with error :math:`\epsilon`):
+
+    .. math::
+        H_\epsilon = \\frac{1}{\sqrt{2}}\\begin{bmatrix} \sqrt{1 + \epsilon} & \sqrt{1 - \epsilon}\\\ \sqrt{1 - \epsilon} & -\sqrt{1 + \epsilon} \\end{bmatrix}
+
+    Beamsplitter transformation :math:`B_\epsilon` (with error :math:`\epsilon`):
+
+    .. math::
+        B_\epsilon = \\frac{1}{\sqrt{2}}\\begin{bmatrix} \sqrt{1 + \epsilon} & i\sqrt{1 - \epsilon}\\\ i\sqrt{1 - \epsilon} & \sqrt{1 + \epsilon} \\end{bmatrix}
+
     Args:
         hadamard: Amplitude-modulating phase shift
+        epsilon: Errors for beamsplitter operator
+        dtype: Cast values as `dtype` for this pairwise unitary operator
 
     """
     def __init__(self, hadamard: bool, epsilon: float=0, dtype=NP_COMPLEX):
@@ -127,13 +170,17 @@ class Beamsplitter(LinearOpticalComponent):
             ], dtype=self.dtype)
 
 
-class PhaseShiftUpper(LinearOpticalComponent):
-    """Ideal 50/50 beamsplitter
+class PhaseShiftUpper(PairwiseUnitary):
+    """Upper phase shift operator
 
-    Implements the phase shift gate.
+    Implements the upper phase shift operator :math:`L(\\theta)` given phase :math:`\\theta`:
+
+    .. math::
+        L(\\theta) = \\begin{bmatrix} e^{i\\theta} & 0\\\ 0 & 1 \\end{bmatrix}
 
     Args:
-        phase_shift: Phase shift
+        phase_shift: Phase shift :math:`\\theta`
+        dtype: Cast values as `dtype` for this pairwise unitary operator
 
     """
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):
@@ -148,13 +195,17 @@ class PhaseShiftUpper(LinearOpticalComponent):
         ], dtype=self.dtype)
 
 
-class PhaseShiftLower(LinearOpticalComponent):
-    """Ideal 50/50 beamsplitter
+class PhaseShiftLower(PairwiseUnitary):
+    """Lower phase shift operator
 
-    Implements the phase shift gate.
+    Implements the upper phase shift operator :math:`L(\\theta)` given phase :math:`\\theta`:
+
+    .. math::
+        R(\\theta) = \\begin{bmatrix} 1 & 0\\\ 0 & e^{i\\theta} \\end{bmatrix}
 
     Args:
-        phase_shift: Phase shift
+        phase_shift: Phase shift :math:`\\theta`
+        dtype: Cast values as `dtype` for this pairwise unitary operator
 
     """
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):
@@ -169,13 +220,17 @@ class PhaseShiftLower(LinearOpticalComponent):
         ], dtype=self.dtype)
 
 
-class PhaseShiftDifferentialMode(LinearOpticalComponent):
-    """Ideal 50/50 beamsplitter
+class PhaseShiftDifferentialMode(PairwiseUnitary):
+    """Differential phase shift operator
 
-    Implements the phase shift gate.
+    Implements the upper phase shift operator :math:`L(\\theta)` given phase :math:`\\theta`:
+
+    .. math::
+        D(\\theta) = \\begin{bmatrix} e^{i\\theta / 2} & 0\\\ 0 & e^{-i\\theta/2} \\end{bmatrix}
 
     Args:
-        phase_shift: Phase shift
+        phase_shift: Phase shift :math:`\\theta`
+        dtype: Cast values as `dtype` for this pairwise unitary operator
 
     """
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):
@@ -190,13 +245,17 @@ class PhaseShiftDifferentialMode(LinearOpticalComponent):
         ], dtype=self.dtype)
 
 
-class PhaseShiftCommonMode(LinearOpticalComponent):
-    """Ideal 50/50 beamsplitter
+class PhaseShiftCommonMode(PairwiseUnitary):
+    """Common mode phase shift operator
 
-    Implements the phase shift gate.
+    Implements the upper phase shift operator :math:`L(\\theta)` given phase :math:`\\theta`:
+
+    .. math::
+        C(\\theta) = \\begin{bmatrix} e^{i\\theta} & 0\\\ 0 & e^{i\\theta} \\end{bmatrix}
 
     Args:
-        phase_shift: Phase shift
+        phase_shift: Phase shift :math:`\\theta`
+        dtype: Cast values as `dtype` for this pairwise unitary operator
 
     """
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):

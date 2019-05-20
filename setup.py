@@ -3,8 +3,26 @@ from setuptools import setup
 
 project_name = "neurophox"
 
+requirements = [
+    "numpy",
+    "scipy",
+    "torch==1.1",
+    "tensorflow==2.0"
+]
+
 setup(
     name=project_name,
     version="0.1",
-    packages=[project_name]
+    packages=[project_name],
+    description='A simulation framework for unitary neural networks and photonic devices',
+    author='Sunil Pai',
+    author_email='sunilpai@stanford.edu',
+    license='MIT',
+    classifiers=(
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'Natural Language :: English',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python',
+    )
 )

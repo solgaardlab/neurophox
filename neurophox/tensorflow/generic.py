@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import tensorflow as tf
 import numpy as np
@@ -17,7 +17,6 @@ class TransformerLayer(tf.keras.layers.Layer):
         is_complex: Whether the input to be transformed is complex or not
         activation: Nonlinear activation function (None if there's no nonlinearity)
     """
-
     def __init__(self, units: int, is_complex: bool = True, activation: tf.keras.layers.Activation = None, **kwargs):
         self.units = units
         self.is_complex = is_complex
@@ -25,10 +24,28 @@ class TransformerLayer(tf.keras.layers.Layer):
         super(TransformerLayer, self).__init__(**kwargs)
 
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:
-        return inputs
+        """
+        Transform inputs using layer (needs to be overwritten by child classes)
+
+        Args:
+            inputs: Inputs to be transformed by layer
+
+        Returns:
+            Transformed inputs
+        """
+        raise NotImplementedError("Needs to be overwritten by child class.")
 
     def inverse_transform(self, outputs: tf.Tensor) -> tf.Tensor:
-        return outputs
+        """
+        Transform outputs using layer
+
+        Args:
+            outputs: Outputs to be inverse-transformed by layer
+
+        Returns:
+            Transformed outputs
+        """
+        raise NotImplementedError("Needs to be overwritten by child class.")
 
     def call(self, inputs, training=None, mask=None):
         outputs = self.transform(inputs)
@@ -38,15 +55,33 @@ class TransformerLayer(tf.keras.layers.Layer):
 
     @property
     def matrix(self):
+        """
+        Shortcut of :code:`transformer.transform(np.eye(self.units))`
+
+        Returns:
+            Matrix implemented by layer
+        """
         identity_matrix = np.eye(self.units, dtype=np.complex64)
         return self.transform(identity_matrix).numpy()
 
     @property
     def inverse_matrix(self):
+        """
+        Shortcut of :code:`transformer.inverse_transform(np.eye(self.units))`
+
+        Returns:
+            Inverse matrix implemented by layer
+        """
         identity_matrix = np.eye(self.units, dtype=np.complex64)
         return self.inverse_transform(identity_matrix).numpy()
 
     def plot(self, plt):
+        """
+        Plot :code:`transformer.matrix`.
+
+        Args:
+            plt: :code:`matplotlib.pyplot` for plotting
+        """
         plot_complex_matrix(plt, self.matrix)
 
 
@@ -58,7 +93,6 @@ class CompoundTransformerLayer(TransformerLayer):
         transformer_list: List of :class:`Transformer` objects to apply to the inputs
         is_complex: Whether the input to be transformed is complex
     """
-
     def __init__(self, units: int, transformer_list: List[TransformerLayer],
                  is_complex: bool = True):
         self.transformer_list = transformer_list
@@ -66,6 +100,19 @@ class CompoundTransformerLayer(TransformerLayer):
                                                        is_complex=is_complex)
 
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:
+        """Inputs are transformed by :math:`L` transformer layers :math:`T^{(\ell)} \in \mathbb{C}^{N \\times N}` as follows:
+
+        .. math::
+            V_{\mathrm{out}} = V_{\mathrm{in}} \prod_{\ell=1}^L T_\ell,
+
+        where :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            inputs: Input batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Transformation of `inputs`, :math:`V_{\mathrm{out}}`
+        """
         outputs = inputs
         for transformer in self.transformer_list:
             outputs = transformer.transform(outputs)
@@ -84,30 +131,59 @@ class PermutationLayer(TransformerLayer):
     Args:
         permuted_indices: order of indices for the permutation matrix (efficient permutation representation)
     """
-
     def __init__(self, permuted_indices: np.ndarray):
         super(PermutationLayer, self).__init__(units=permuted_indices.shape[0])
         self.permuted_indices = np.asarray(permuted_indices, dtype=np.int32)
         self.inv_permuted_indices = inverse_permutation(self.permuted_indices)
 
     def transform(self, inputs: tf.Tensor):
+        """
+        Performs the permutation for this layer represented by :math:`P` defined by `permuted_indices`:
+
+        .. math::
+            V_{\mathrm{out}} = V_{\mathrm{in}} P,
+
+        where :math:`P` is any :math:`N`-dimensional permutation and
+        :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            inputs: Input batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Permutation of `inputs`, :math:`V_{\mathrm{out}}`
+        """
         return tf.gather(inputs, self.permuted_indices, axis=-1)
 
     def inverse_transform(self, outputs: tf.Tensor):
+        """
+        Performs the inverse permutation for this layer represented by :math:`P^{-1}` defined by `inv_permuted_indices`:
+
+        .. math::
+            V_{\mathrm{in}} = V_{\mathrm{out}} P^{-1},
+
+        where :math:`P` is any :math:`N`-dimensional permutation and
+        :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Permutation of `outputs`, :math:`V_{\mathrm{in}}`
+        """
         return tf.gather(outputs, self.inv_permuted_indices, axis=-1)
 
 
 class MeshVerticalLayer(TransformerLayer):
+    """
+    Args:
+        diag: the diagonal terms to multiply
+        off_diag: the off-diagonal terms to multiply
+        perm: the permutation for the mesh vertical layer (prior to the coupling operation)
+        right_perm: the right permutation for the mesh vertical layer
+            (usually for the final layer and after the coupling operation)
+    """
     def __init__(self, pairwise_perm_idx: np.ndarray, diag: tf.Tensor, off_diag: tf.Tensor,
                  perm: PermutationLayer = None, right_perm: PermutationLayer = None):
-        """
-        Args:
-            diag: the diagonal terms to multiply
-            off_diag: the off-diagonal terms to multiply
-            perm: the permutation for the mesh vertical layer (prior to the coupling operation)
-            right_perm: the right permutation for the mesh vertical layer
-                (usually for the final layer and after the coupling operation)
-        """
         self.diag = diag
         self.off_diag = off_diag
         self.perm = perm
@@ -116,11 +192,39 @@ class MeshVerticalLayer(TransformerLayer):
         super(MeshVerticalLayer, self).__init__(pairwise_perm_idx.shape[0])
 
     def transform(self, inputs: tf.Tensor):
+        """
+        Propagate `inputs` through single layer :math:`\ell < L`
+        (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+
+        .. math::
+            V_{\mathrm{out}} = V_{\mathrm{in}} U^{(\ell')},
+
+        Args:
+            inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Propagation of `inputs` through single layer :math:`\ell` to form an array
+            :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
+        """
         outputs = inputs if self.perm is None else self.perm.transform(inputs)
         outputs = outputs * self.diag + tf.gather(outputs * self.off_diag, self.pairwise_perm_idx, axis=-1)
         return outputs if self.right_perm is None else self.right_perm.transform(outputs)
 
     def inverse_transform(self, outputs: tf.Tensor):
+        """
+        Inverse-propagate `inputs` through single layer :math:`\ell < L`
+        (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+
+        .. math::
+            V_{\mathrm{in}} = V_{\mathrm{out}} (U^{(\ell')})^\dagger,
+
+        Args:
+            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Inverse propagation of `outputs` through single layer :math:`\ell` to form an array
+            :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+        """
         inputs = outputs if self.right_perm is None else self.right_perm.inverse_transform(outputs)
         diag = tf.math.conj(self.diag)
         off_diag = tf.gather(tf.math.conj(self.off_diag), self.pairwise_perm_idx, axis=-1)
@@ -143,6 +247,14 @@ class Mesh:
         self.perm_layers = [PermutationLayer(self.model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
     def mesh_layers(self, phases: MeshPhasesTensorflow) -> List[MeshVerticalLayer]:
+        """
+
+        Args:
+            phases:  The :code:`MeshPhasesTensorflow` object containing :math:`\\theta_{n\ell}, \phi_{n\ell}, \gamma_{n}`
+
+        Returns:
+            List of mesh layers to be used by any instance of :code:`MeshLayer`
+        """
         internal_psl = phases.internal_phase_shift_layers
         external_psl = phases.external_phase_shift_layers
         # smooth trick to efficiently perform the layerwise coupling computation
@@ -193,6 +305,20 @@ class MeshLayer(TransformerLayer):
 
     @tf.function
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:
+        """
+        Performs the operation (where :math:`U` represents the matrix for this layer):
+
+        .. math::
+            V_{\mathrm{out}} = V_{\mathrm{in}} U,
+
+        where :math:`U \in \mathrm{U}(N)` and :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Forward transformation of `inputs`, :math:`V_{\mathrm{out}}`
+        """
         mesh_phases, mesh_layers = self.phases_and_layers
         outputs = inputs * mesh_phases.input_phase_shift_layer if self.include_diagonal_phases else inputs
         for layer in range(self.num_layers):
@@ -201,6 +327,20 @@ class MeshLayer(TransformerLayer):
 
     @tf.function
     def inverse_transform(self, outputs: tf.Tensor) -> tf.Tensor:
+        """
+        Performs the operation (where :math:`U` represents the matrix for this layer):
+
+        .. math::
+            V_{\mathrm{in}} = V_{\mathrm{out}} U^\dagger,
+
+        where :math:`U \in \mathrm{U}(N)` and :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Inverse transformation of `outputs`, :math:`V_{\mathrm{in}}`
+        """
         mesh_phases, mesh_layers = self.phases_and_layers
         inputs = outputs
         for layer in reversed(range(self.num_layers)):
@@ -210,7 +350,12 @@ class MeshLayer(TransformerLayer):
         return inputs
 
     @property
-    def phases_and_layers(self):
+    def phases_and_layers(self) -> Tuple[MeshPhasesTensorflow, List[MeshVerticalLayer]]:
+        """
+
+        Returns:
+            Phases and layers for this mesh layer
+        """
         mesh_phases = MeshPhasesTensorflow(
             theta=self.theta,
             phi=self.phi,
@@ -223,11 +368,13 @@ class MeshLayer(TransformerLayer):
         mesh_layers = self.mesh.mesh_layers(mesh_phases)
         return mesh_phases, mesh_layers
 
-    def adjoint_transform(self, inputs: tf.Tensor) -> tf.Tensor:
-        return self.inverse_transform(inputs)
-
     @property
     def phases(self) -> MeshPhases:
+        """
+
+        Returns:
+            The :code:`MeshPhases` object for this layer
+        """
         return MeshPhases(
             theta=self.theta.numpy() * self.mesh.model.mask,
             phi=self.phi.numpy() * self.mesh.model.mask,

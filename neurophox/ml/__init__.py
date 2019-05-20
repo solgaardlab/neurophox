@@ -1,3 +1,2 @@
-from .linear import LinearModelRunner
-from .linearmulti import LinearMultiModelRunner
+from .linear import LinearMultiModelRunner
 from .nonlinearities import *

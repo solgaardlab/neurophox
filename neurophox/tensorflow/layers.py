@@ -18,14 +18,16 @@ class RM(MeshLayer):
         hadamard: Hadamard convention for the beamsplitters
         basis: Phase basis to use
         bs_error: Beamsplitter split ratio error
-        is_trainable: Whether the parameters in this layer are trainable
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
         activation: Nonlinear activation function (None if there's no nonlinearity)
     """
 
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = BLOCH,
-                 bs_error: float = 0.0, theta_init_name="haar_rect",
-                 phi_init_name="random_phi", gamma_init_name="random_gamma", include_diagonal_phases=True,
-                 activation: tf.keras.layers.Activation = None, **kwargs):
+                 bs_error: float = 0.0, theta_init_name: Optional[str]="haar_rect",
+                 phi_init_name: Optional[str]="random_phi", gamma_init_name: Optional[str]="random_gamma",
+                 include_diagonal_phases=True, activation: tf.keras.layers.Activation = None, **kwargs):
         super(RM, self).__init__(
             RectangularMeshModel(units, num_layers, hadamard, bs_error, basis,
                                  theta_init_name, phi_init_name, gamma_init_name),
@@ -41,13 +43,15 @@ class TM(MeshLayer):
         hadamard: Hadamard convention for the beamsplitters
         basis: Phase basis to use
         bs_error: Beamsplitter split ratio error
-        is_trainable: Whether the parameters are trainable
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
         activation: Nonlinear activation function (None if there's no nonlinearity)
     """
 
     def __init__(self, units: int, hadamard: bool = False, basis: str = BLOCH,
-                 bs_error: float = 0.0, theta_init_name="haar_tri",
-                 phi_init_name="random_phi", gamma_init_name="random_gamma",
+                 bs_error: float = 0.0, theta_init_name: Optional[str]="haar_rect",
+                 phi_init_name: Optional[str]="random_phi", gamma_init_name: Optional[str]="random_gamma",
                  activation: tf.keras.layers.Activation = None, **kwargs):
         super(TM, self).__init__(
             TriangularMeshModel(units, hadamard, bs_error, basis,
@@ -61,27 +65,30 @@ class PRM(MeshLayer):
 
     Args:
         units: The dimension of the unitary matrix (:math:`N`) to be modeled by this transformer
-        tunable_layers_per_block: The number of tunable layers per block (overrides `num_tunable_layers_list`, `sampling_frequencies`)
+        tunable_layers_per_block: The number of tunable layers per block (overrides :code:`num_tunable_layers_list`,
+        :code:`sampling_frequencies`)
         num_tunable_layers_list: Number of tunable layers in each block in order from left to right
         sampling_frequencies: Frequencies of sampling frequencies between the tunable layers
         is_trainable: Whether the parameters are trainable
         bs_error: Photonic error in the beamsplitter
-        theta_init_name: Initializer name for theta
-        phi_init_name: Initializer name for phi
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
         activation: Nonlinear activation function (None if there's no nonlinearity)
     """
 
     def __init__(self, units: int, tunable_layers_per_block: int = None,
                  num_tunable_layers_list: Optional[List[int]] = None, sampling_frequencies: Optional[List[int]] = None,
                  bs_error: float = 0.0, hadamard: bool = False,
-                 theta_init_name: Optional[str] = 'haar_prm', phi_init_name: Optional[str] = 'random_phi',
+                 theta_init_name: Optional[str] = "haar_rect", phi_init_name: Optional[str] = "random_phi",
+                 gamma_init_name: Optional[str] = "random_gamma",
                  activation: tf.keras.layers.Activation = None, **kwargs):
         if theta_init_name == 'haar_prm' and tunable_layers_per_block is not None:
             raise NotImplementedError('haar_prm initializer is incompatible with setting tunable_layers_per_block.')
         super(PRM, self).__init__(
             PermutingRectangularMeshModel(units, tunable_layers_per_block, num_tunable_layers_list,
                                           sampling_frequencies, bs_error, hadamard,
-                                          theta_init_name, phi_init_name),
+                                          theta_init_name, phi_init_name, gamma_init_name),
             activation=activation, **kwargs
         )
 
@@ -105,6 +112,8 @@ class SVD(CompoundTransformerLayer):
                  activation: tf.keras.layers.Activation = None):
         self.units = units
         self.output_units = output_units if output_units is not None else units
+        if output_units != units:
+            raise NotImplementedError("Still working out a clean implementation of non-square linear operators.")
         self.mesh_name = mesh_dict['name']
         self.mesh_properties = mesh_dict.get('properties', {})
         self.pos = pos_singular_values
@@ -164,6 +173,7 @@ class Diagonal(TransformerLayer):
         output_units: Dimension of the output (number of output waveguide ports), :math:`M`.
         If :math:`M < N`, remove last :math:`N - M` elements. If :math:`M > N`, pad with :math:`M - N` zeros.
         pos: Enforce positive definite matrix (only positive singular values)
+
     """
 
     def __init__(self, units: int, is_complex: bool = True, output_units: Optional[int] = None,

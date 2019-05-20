@@ -14,7 +14,7 @@ RANDOM_THETA = float(np.pi * 2 * np.random.rand())
 
 class LinearOpticalComponentTest(tf.test.TestCase):
     def test(self):
-        loc = LinearOpticalComponent()
+        loc = PairwiseUnitary()
         self.assertAllClose(loc.matrix @ loc.inverse_matrix, IDENTITY)
         self.assertAllClose(loc.matrix.conj().T, loc.inverse_matrix)
 

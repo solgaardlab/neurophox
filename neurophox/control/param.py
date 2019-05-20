@@ -7,6 +7,12 @@ from ..helpers import roll_tensor, roll_torch, to_stripe_array, to_stripe_tensor
 
 
 class MeshParam:
+    """A class that cleanly arranges parameters into a specific arrangement that can be used to simulate any mesh
+
+    Args:
+        param: parameter to arrange in mesh
+        units: number of inputs/outputs of the mesh
+    """
     def __init__(self, param: np.ndarray, units: int):
         self.param = param
         self.units = units
@@ -50,6 +56,12 @@ class MeshParam:
 
 
 class MeshParamTensorflow:
+    """A class that cleanly arranges parameters into a specific arrangement that can be used to simulate any mesh
+
+    Args:
+        param: parameter to arrange in mesh
+        units: number of inputs/outputs of the mesh
+    """
     def __init__(self, param: tf.Tensor, units: int):
         self.param = param
         self.units = units
@@ -79,6 +91,12 @@ class MeshParamTensorflow:
 
 
 class MeshParamTorch:
+    """A class that cleanly arranges parameters into a specific arrangement that can be used to simulate any mesh
+
+    Args:
+        param: parameter to arrange in mesh
+        units: number of inputs/outputs of the mesh
+    """
     def __init__(self, param: torch.Tensor, units: int):
         self.param = param
         self.units = units

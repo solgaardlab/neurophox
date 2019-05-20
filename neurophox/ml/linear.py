@@ -1,71 +1,120 @@
-from typing import Optional, Callable
+from typing import Optional, Callable, List, Union
 
 import numpy as np
 import tensorflow as tf
-import datetime
-
-from ..tensorflow import SVD, MeshLayer
+import pickle
 
 from ..config import TF_COMPLEX, NP_COMPLEX
 from ..helpers import random_gaussian_batch
+from ..tensorflow import MeshLayer, SVD
 
 
-class LinearModelRunner:
-    def __init__(self, model_name: str, layer: MeshLayer, optimizer: tf.keras.optimizers.Optimizer,
-                 batch_size: int, iterations_per_epoch: int=50, logdir: Optional[str]=None):  # e.g., logdir=/data/tensorboard/neurophox/
-        self.losses = []
-        self.results = []
-        self.layer = layer
-        self.optimizer = optimizer
+class LinearMultiModelRunner:
+    """
+    Complex mean square error linear optimization experiment that can run and track multiple model optimizations in parallel.
+
+    Args:
+        experiment_name: Name of the experiment
+        layer_names: List of layer names
+        layers: List of transformer layers
+        optimizer: Optimizer for all layers or list of optimizers for each layer
+        batch_size: Batch size for the optimization
+        iterations_per_epoch: Iterations per epoch
+        iterations_per_tb_update: Iterations per update of TensorBoard
+        logdir: Logging directory for TensorBoard to track losses of each layer (default to `None` for no logging)
+    """
+    def __init__(self, experiment_name: str, layer_names: List[str],
+                 layers: List[MeshLayer], optimizer: Union[tf.keras.optimizers.Optimizer, List[tf.keras.optimizers.Optimizer]],
+                 batch_size: int, iterations_per_epoch: int=50, iterations_per_tb_update: int=5,
+                 logdir: Optional[str]=None):  # e.g., logdir=/data/tensorboard/neurophox/
+        self.losses = {name: [] for name in layer_names}
+        self.results = {name: [] for name in layer_names}
+        self.layer_names = layer_names
+        self.layers = layers
+        self.optimizers = optimizer if isinstance(optimizer, List) else [optimizer for _ in layer_names]
+        if not (len(layer_names) == len(layers) and len(layers) == len(self.optimizers)):
+            raise ValueError("layer_names, layers, and optimizers must all be the same length")
         self.batch_size = batch_size
         self.iters = 0
         self.iterations_per_epoch = iterations_per_epoch
-        self.model_name = model_name
+        self.iterations_per_tb_update = iterations_per_tb_update
+        self.experiment_name = experiment_name
         self.logdir = logdir
         if self.logdir:
-            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            self.summary_writer = tf.summary.create_file_writer(
-                f'{self.logdir}/{self.model_name}/' + current_time + '/'
-            )
+            self.summary_writers = {name: tf.summary.create_file_writer(
+                f'{self.logdir}/{experiment_name}/{name}/'
+            ) for name in layer_names}
 
     def iterate(self, target_unitary: np.ndarray):
-        x_train, y_train = generate_keras_batch(self.layer.units, target_unitary, self.batch_size)
-        with tf.GradientTape() as tape:
-            loss = complex_mse(self.layer(x_train), y_train)
-        grads = tape.gradient(loss, self.layer.trainable_variables)
-        self.optimizer.apply_gradients(grads_and_vars=zip(grads, self.layer.trainable_variables))
-        self.losses.append(tf.reduce_sum(complex_mse(self.layer(tf.eye(self.layer.units, dtype=TF_COMPLEX)),
-                                       tf.convert_to_tensor(target_unitary.astype(NP_COMPLEX)))).numpy())
-        if self.iters % self.iterations_per_epoch == 0:
-            if self.logdir:
-                self.update_tensorboard()
-            if not isinstance(self.layer, SVD):
-                phases = self.layer.phases
-                mask = self.layer.mesh.model.mask
-                estimate = self.layer(np.eye(self.layer.units, dtype=NP_COMPLEX))
-                self.results.append({
-                    "theta_list": phases.theta.param_list(mask),
-                    "phi_list": phases.phi.param_list(mask),
-                    "theta_checkerboard": phases.theta.checkerboard_arrangement,
-                    "phi_checkerboard": phases.phi.checkerboard_arrangement,
-                    "gamma": phases.gamma,
-                    "estimate_mag": np.abs(estimate),
-                    "error_mag": np.abs(estimate - target_unitary)
-                })
+        """
+        Run gradient update toward a target unitary :math:`U`.
+
+        Args:
+            target_unitary: Target unitary, :math:`U`.
+
+        """
+        x_train, y_train = generate_keras_batch(self.layers[0].units, target_unitary, self.batch_size)
+        for name, layer, optimizer in zip(self.layer_names, self.layers, self.optimizers):
+            with tf.GradientTape() as tape:
+                loss = complex_mse(layer(x_train), y_train)
+            grads = tape.gradient(loss, layer.trainable_variables)
+            optimizer.apply_gradients(grads_and_vars=zip(grads, layer.trainable_variables))
+            self.losses[name].append(tf.reduce_sum(
+                complex_mse(layer(tf.eye(layer.units, dtype=TF_COMPLEX)),
+                            tf.convert_to_tensor(target_unitary.astype(NP_COMPLEX)))).numpy()
+            )
+            if self.iters % self.iterations_per_tb_update and self.logdir:
+                self.update_tensorboard(name)
+            if self.iters % self.iterations_per_epoch == 0:
+                if not isinstance(layer, SVD):
+                    phases = layer.phases
+                    mask = layer.mesh.model.mask
+                    estimate = layer(tf.eye(layer.units, dtype=TF_COMPLEX)).numpy()
+                    self.results[name].append({
+                        "theta_list": phases.theta.param_list(mask),
+                        "phi_list": phases.phi.param_list(mask),
+                        "theta_checkerboard": phases.theta.checkerboard_arrangement,
+                        "phi_checkerboard": phases.phi.checkerboard_arrangement,
+                        "gamma": phases.gamma,
+                        "estimate_mag": np.abs(estimate),
+                        "error_mag": np.abs(estimate - target_unitary)
+                    })
+
         self.iters += 1
 
-    def update_tensorboard(self):
-        with self.summary_writer.as_default():
-            tf.summary.scalar('loss', self.losses[-1], step=self.iters // self.iterations_per_epoch)
+    def update_tensorboard(self, name: str):
+        """
+        Update TensorBoard variables.
 
-    def run(self, num_epochs, target_unitary: np.ndarray, pbar: Optional[Callable]=None):
+        Args:
+            name: Layer name corresponding to variables that are updated
+
+        """
+        with self.summary_writers[name].as_default():
+            tf.summary.scalar(f'loss-{self.experiment_name}', self.losses[name][-1], step=self.iters)
+
+    def run(self, num_epochs: int, target_unitary: np.ndarray, pbar: Optional[Callable]=None):
+        """
+
+        Args:
+            num_epochs: Number of epochs (defined in terms of `iterations_per_epoch`)
+            target_unitary: Target unitary, :math:`U`.
+            pbar: Progress bar (tqdm recommended)
+
+        """
         iterator = pbar(range(num_epochs * self.iterations_per_epoch)) if pbar else range(num_epochs * self.iterations_per_epoch)
         for _ in iterator:
             self.iterate(target_unitary)
-            if pbar is not None:
-                iterator.set_description(f"𝓛: {self.losses[-1]:.5f}")
-            else:
-                print(f"𝓛: {self.losses[-1]:.5f}")
+
+    def save(self, savepath: str):
+        """
+        Save results for the multi-model runner to pickle file.
+
+        Args:
+            savepath: Path to save results.
+        """
+        with open(f"{savepath}/{self.experiment_name}.p", "wb") as f:
+            pickle.dump({"losses": self.losses, "results": self.results}, f)
 
 
 def generate_keras_batch(units, target_unitary, batch_size):

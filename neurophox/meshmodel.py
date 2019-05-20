@@ -8,26 +8,26 @@ from .config import BLOCH, GLOBAL_SEED, TF_COMPLEX, NUMPY, TFKERAS
 
 
 class MeshModel:
+    """Any feedforward mesh model of :math:`N` inputs/outputs and `L` layers.
+
+    Args:
+        perm_idx: A numpy array of :math:`N \\times L` permutation indices for all layers of the mesh
+        hadamard: Whether to use Hadamard convention
+        num_mzis: A numpy array of :math:`L` integers, where for layer :math:`\ell`,
+        :math:`M_\ell \leq \\lfloor N / 2\\rfloor`, used to defined the phase shift mask.
+        bs_error: Beamsplitter error (ignore for pure machine learning applications)
+        bs_error_seed: Seed for randomizing beamsplitter error (ignore for pure machine learning applications)
+        use_different_errors: Use different errors for the left and right beamsplitter errors
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
+        basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
+    """
     def __init__(self, perm_idx: np.ndarray, hadamard: bool = False, num_mzis: Optional[np.ndarray] = None,
                  bs_error: float = 0.0, bs_error_seed: int = GLOBAL_SEED, use_different_errors: bool = False,
                  theta_init_name: str = "random_theta", phi_init_name: str = "random_phi",
                  gamma_init_name: str = "random_gamma", basis: str = BLOCH):
-        """
-        Any feedforward mesh model of :math:`N` inputs/outputs and `L` layers.
 
-        Args:
-            perm_idx: A numpy array of :math:`N \times L` permutation indices for all layers of the mesh
-            hadamard: Whether to use Hadamard convention
-            num_mzis: A numpy array of :math:`L` integers, where for layer :math:`\ell`,
-            :math:`M_\ell \leq \lfloor N / 2\rfloor`, used to defined the phase shift mask.
-            bs_error: Beamsplitter error (ignore for pure machine learning applications)
-            bs_error_seed: Seed for randomizing beamsplitter error (ignore for pure machine learning applications)
-            use_different_errors: Use different errors for the left and right beamsplitter errors
-            theta_init_name: Initializer name for theta
-            phi_init_name: Initializer name for phi
-            gamma_init_name: Initializer name for gamma
-            basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
-        """
         self.units = perm_idx.shape[1]
         self.num_layers = perm_idx.shape[0] - 1
         self.perm_idx = perm_idx
@@ -59,8 +59,7 @@ class MeshModel:
             backend: Whether to use Numpy, Tensorflow, or PyTorch (not yet supported, will throw error).
 
         Returns:
-            Numpy arrays or Tensorflow variables corresponding to :math:`\theta_{n\ell}, \phi_{n\ell}, \gamma_n`.
-
+            Numpy arrays or Tensorflow variables corresponding to :math:`\\theta_{n\ell}, \phi_{n\ell}, \gamma_n`.
         """
         theta_init = get_initializer(self.units, self.num_layers, self.theta_init_name, self.hadamard)
         phi_init = get_initializer(self.units, self.num_layers, self.phi_init_name, self.hadamard)
@@ -73,6 +72,14 @@ class MeshModel:
             raise NotImplementedError(f"Backend {backend} not supported.")
 
     def get_bs_error_matrix(self, right: bool):
+        """
+
+        Args:
+            right: whether to set errors for second set of MZI beamsplitters, useful for photonic simulations.
+
+        Returns:
+            Error numpy arrays for "beamsplitter layers."
+        """
         if self.bs_error_seed is not None:
             np.random.seed(right + self.bs_error_seed)
         mask = self.mask if self.mask is not None else np.ones((self.num_layers, self.units // 2))
@@ -83,7 +90,7 @@ class MeshModel:
         """
 
         Returns:
-            Error numpy arrays for Numpy `MeshLayer`
+            Error numpy arrays for Numpy :code:`MeshNumpyLayer`
         """
         if self.bs_error_seed is not None:
             np.random.seed(self.bs_error_seed)
@@ -102,7 +109,7 @@ class MeshModel:
         """
 
         Returns:
-            Error tensors for Tensorflow `MeshLayer`
+            Error tensors for Tensorflow :code:`MeshLayer`
         """
         e_l, e_r = self.mzi_error_matrices
 
@@ -116,6 +123,21 @@ class MeshModel:
 
 
 class RectangularMeshModel(MeshModel):
+    """Rectangular mesh
+
+    The rectangular mesh contains :math:`N` inputs/outputs and :math:`L` layers in rectangular grid arrangement
+    of pairwise unitary operators to implement :math:`U \in \mathrm{U}(N)`.
+
+    Args:
+        units: Input dimension, :math:`N`
+        num_layers: Number of layers, :math:`L`
+        hadamard: Hadamard convention
+        bs_error: Beamsplitter layer
+        basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
+    """
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, bs_error: float = 0.0,
                  basis: str = BLOCH, theta_init_name: str = "haar_rect", phi_init_name: str = "random_phi",
                  gamma_init_name: str = "random_gamma"):
@@ -134,6 +156,20 @@ class RectangularMeshModel(MeshModel):
 
 
 class TriangularMeshModel(MeshModel):
+    """Triangular mesh
+
+    The triangular mesh contains :math:`N` inputs/outputs and :math:`L = 2N - 3` layers in triangular grid arrangement
+    of pairwise unitary operators to implement any :math:`U \in \mathrm{U}(N)`.
+
+    Args:
+        units: Input dimension, :math:`N`
+        hadamard: Hadamard convention
+        bs_error: Beamsplitter layer
+        basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
+    """
     def __init__(self, units: int, hadamard: bool = False, bs_error: float = 0.0, basis: str = BLOCH,
                  theta_init_name: str = "haar_tri", phi_init_name: str = "random_phi",
                  gamma_init_name: str = "random_gamma"):
@@ -151,6 +187,21 @@ class TriangularMeshModel(MeshModel):
 
 
 class ButterflyMeshModel(MeshModel):
+    """Butterfly mesh
+
+    The butterfly mesh contains :math:`L` layers and :math:`N = 2^L` inputs/outputs to implement :math:`U \in \mathrm{U}(N)`.
+    Unlike the triangular and full (:math:`L = N`) rectangular mesh, the butterfly mesh is not universal. However,
+    it has attractive properties for near-term photonic implementations of unitary mesh models.
+
+    Args:
+        num_layers: Number of layers, :math:`L`
+        hadamard: Hadamard convention
+        bs_error: Beamsplitter layer
+        basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
+    """
     def __init__(self, num_layers: int, hadamard: bool = False, bs_error: float = 0.0):
         super(ButterflyMeshModel, self).__init__(np.vstack(
             [butterfly_permutation(2 ** num_layers, 2 ** layer) for layer in range(num_layers)]).astype(np.int32),
@@ -163,14 +214,15 @@ class PermutingRectangularMeshModel(MeshModel):
     """Permuting rectangular mesh model
 
     Args:
-        units: The dimension of the unitary matrix (:math:`N`) to be modeled by this transformer
+        units: Input dimension, :math:`N`
         tunable_layers_per_block: The number of tunable layers per block (overrides `num_tunable_layers_list`, `sampling_frequencies`)
         num_tunable_layers_list: Number of tunable layers in each block in order from left to right
         sampling_frequencies: Frequencies of sampling frequencies between the tunable layers
         bs_error: Photonic error in the beamsplitter
         hadamard: Whether to use hadamard convention (otherwise use beamsplitter convention)
-        theta_init_name: Initializer name for theta
-        phi_init_name: Initializer name for phi
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
     """
 
     def __init__(self, units: int, tunable_layers_per_block: int = None,

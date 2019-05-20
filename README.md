@@ -21,31 +21,23 @@ Scattering matrix models used in unitary mesh networks for photonics simulations
 
 ### Installation
 
-There are three options to install `neurophox`:
-1. Installation via `conda` (must be in a dedicated conda environment!) for Linux and Mac OS targets.
-
-    GPU version:
-    ```bash
-    conda install -c sunilpai neurophox-gpu
-    ```
-    CPU version:
-    ```bash
-    conda install -c sunilpai neurophox
-    ```
-2. Installation via `pip` (all other dependencies installed manually).
+There are currently two options to install `neurophox`:
+1. Installation via `pip`:
     ```bash
     pip install neurophox
     ```
-3. Installation from source via `pip`.
+2. Installation from source via `pip`:
     ```bash
     git clone https://github.com/solgaardlab/neurophox
-    pip install -e .
+    pip install -e neurophox
     pip install -r requirements.txt
     ```
     
-If not installing via `conda`, you'll need to install [PyTorch](https://pytorch.org/) (since PyTorch mesh layers are currently in development) and [Tensorflow 2.0](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf).
+If installing other dependencies manually, ensure you install [PyTorch](https://pytorch.org/) (since PyTorch mesh layers are currently in development) and [Tensorflow 2.0](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf).
 
-If using the `conda` package installation, it is much easier to install GPU dependencies using CUDA 10.0 using the following commands:
+#### Using the GPU
+
+If using a GPU, we recommend using a `conda` environement to install GPU dependencies using CUDA 10.0 with the following commands:
 ```bash
 conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
 pip install tensorflow-gpu==2.0.0-alpha0
@@ -104,11 +96,6 @@ It is possible to compose `neurophox` Tensorflow layers into unitary neural netw
 
 The code to generate the above example is provided in [neurophox notebooks].
 
-## Contributions
-
-`neurophox` is under development and is not yet stable. We welcome pull requests and contributions from the broader community.
-
-If you would like to contribute, please submit a pull request. If you find a bug, please submit an issue on Github.
 
 ## Dependencies and requirements
 
@@ -148,3 +135,11 @@ If you find this repository useful, please cite at least one of the following pa
       year={2019}
     }
     ```
+
+## Contributions
+
+`neurophox` is under development and is not yet stable. 
+
+We welcome pull requests and contributions from the broader community. If you would like to contribute to the codebase, please submit a pull request and title your branch `bug/bug-fix-title` or `feature/feature-title`.
+
+If you find a bug or would like to recommend a feature, please submit an issue on Github.

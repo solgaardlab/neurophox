@@ -12,26 +12,62 @@ class TransformerNumpyLayer:
     """Base transformer layer class for transformers in numpy (invertible functions, usually linear)
 
     Args:
-        units: Dimension of the input to be transformed by the transformer
+        units: Dimension of the input, :math:`N`.
     """
     def __init__(self, units: int):
         self.units = units
 
     def transform(self, inputs: np.ndarray) -> np.ndarray:
-        return inputs
+        """
+        Transform inputs using layer (needs to be overwritten by child classes)
+
+        Args:
+            inputs: Inputs to be transformed by layer
+
+        Returns:
+            Transformed inputs
+        """
+        raise NotImplementedError("Needs to be overwritten by child class.")
 
     def inverse_transform(self, outputs: np.ndarray) -> np.ndarray:
-        return outputs
+        """
+        Transform outputs using layer
+
+        Args:
+            outputs: Outputs to be inverse-transformed by layer
+
+        Returns:
+            Transformed outputs
+        """
+        raise NotImplementedError("Needs to be overwritten by child class.")
 
     @property
     def matrix(self):
+        """
+        Shortcut of :code:`transformer.transform(np.eye(self.units))`
+
+        Returns:
+            Matrix implemented by layer
+        """
         return self.transform(np.eye(self.units))
 
     @property
     def inverse_matrix(self):
+        """
+        Shortcut of :code:`transformer.inverse_transform(np.eye(self.units))`
+
+        Returns:
+            Inverse matrix implemented by layer
+        """
         return self.inverse_transform(np.eye(self.units))
 
     def plot(self, plt):
+        """
+        Plot :code:`transformer.matrix`.
+
+        Args:
+            plt: :code:`matplotlib.pyplot` for plotting
+        """
         plot_complex_matrix(plt, self.matrix)
 
     def __call__(self, inputs: np.ndarray) -> np.ndarray:
@@ -39,13 +75,13 @@ class TransformerNumpyLayer:
 
 
 class CompoundTransformerNumpyLayer(TransformerNumpyLayer):
-    """Compound transformer class for unitary matrices
-
-    Args:
-        units: Dimension acted on by the layer
-        transformer_list: List of :class:`Transformer` objects to apply to the inputs
-    """
     def __init__(self, units: int, transformer_list: List[TransformerNumpyLayer]):
+        """Compound transformer class for unitary matrices
+
+        Args:
+            units: Dimension acted on by the layer
+            transformer_list: List of :class:`Transformer` objects to apply to the inputs
+        """
         self.transformer_list = transformer_list
         super(CompoundTransformerNumpyLayer, self).__init__(units=units)
 
@@ -63,15 +99,15 @@ class CompoundTransformerNumpyLayer(TransformerNumpyLayer):
 
 
 class MeshVerticalNumpyLayer(TransformerNumpyLayer):
+    """
+    Args:
+        tunable_layer: tunable layer
+        perm_idx: the permutation for the mesh vertical layer (prior to the coupling operation)
+        right_perm_idx: the right permutation for the mesh vertical layer
+            (usually for the final layer and after the coupling operation)
+    """
     def __init__(self, tunable_layer: np.ndarray, perm_idx: Optional[np.ndarray] = None,
                  right_perm_idx: Optional[np.ndarray]=None):
-        """
-        Args:
-            tunable_layer: tunable layer
-            perm_idx: the permutation for the mesh vertical layer (prior to the coupling operation)
-            right_perm_idx: the right permutation for the mesh vertical layer
-                (usually for the final layer and after the coupling operation)
-        """
         self.tunable_layer = tunable_layer
         self.perm_idx = perm_idx
         self.right_perm_idx = right_perm_idx
@@ -79,6 +115,22 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
         super(MeshVerticalNumpyLayer, self).__init__(self.tunable_layer.shape[0])
 
     def transform(self, inputs: np.ndarray):
+        """
+        Propagate `inputs` through single layer :math:`\ell < L`
+        (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+
+        .. math::
+            V_{\mathrm{out}} = V_{\mathrm{in}} U^{(\ell')},
+
+        where :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Propagation of `inputs` through single layer :math:`\ell` to form an array
+            :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
+        """
         if self.perm_idx is None:
             outputs = inputs @ self.tunable_layer
         else:
@@ -89,6 +141,22 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
             return outputs.take(self.right_perm_idx, axis=-1)
 
     def inverse_transform(self, outputs: np.ndarray):
+        """
+        Inverse-propagate `inputs` through single layer :math:`\ell < L`
+        (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+
+        .. math::
+            V_{\mathrm{in}} = V_{\mathrm{out}} (U^{(\ell')})^\dagger,
+
+        where :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Inverse propagation of `outputs` through single layer :math:`\ell` to form an array
+            :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+        """
         if self.right_perm_idx is None:
             inputs = outputs @ self.tunable_layer.conj().T
         else:
@@ -100,15 +168,24 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
 
 
 class MeshNumpy:
+    """
+    Args:
+        model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
+    """
     def __init__(self, model: MeshModel):
-        """
-        Args:
-            model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
-        """
         self.model = model
         self.units, self.num_layers = self.model.units, self.model.num_layers
 
     def mesh_layers(self, phases: MeshPhases, use_different_errors=False) -> List[MeshVerticalNumpyLayer]:
+        """
+
+        Args:
+            phases: The :code:`MeshPhases` object containing :math:`\\theta_{n\ell}, \phi_{n\ell}, \gamma_{n}`
+            use_different_errors: use different errors for the left and right beamsplitters
+
+        Returns:
+            List of mesh layers to be used by any instance of :code:`MeshNumpyLayer`
+        """
         mesh_layers = []
         internal_phases = phases.internal_phase_shifts
         external_phases = phases.external_phase_shifts
@@ -139,6 +216,11 @@ class MeshNumpy:
         return mesh_layers
 
     def beamsplitter_layers(self):
+        """
+
+        Returns:
+            List of beamsplitter layers to be used by any instance of :code:`MeshNumpyLayer`
+        """
         beamsplitter_layers_l = []
         beamsplitter_layers_r = []
         e_l, e_r = self.model.mzi_error_matrices
@@ -185,22 +267,62 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         super(MeshNumpyLayer, self).__init__(self.units)
 
     def transform(self, inputs: np.ndarray) -> np.ndarray:
+        """
+        Performs the operation (where :math:`U` represents the matrix for this layer):
+
+        .. math::
+            V_{\mathrm{out}} = V_{\mathrm{in}} U,
+
+        where :math:`U \in \mathrm{U}(N)` and :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Forward transformation of `inputs`
+        """
         outputs = inputs * self.phases.input_phase_shift_layer
         for layer in range(self.num_layers):
             outputs = self.mesh_layers[layer].transform(outputs)
         return outputs
 
     def inverse_transform(self, outputs: np.ndarray) -> np.ndarray:
+        """
+        Performs the operation (where :math:`U` represents the matrix for this layer):
+
+        .. math::
+            V_{\mathrm{in}} = V_{\mathrm{out}} U^\dagger,
+
+        where :math:`U \in \mathrm{U}(N)` and :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Inverse transformation of `outputs`
+        """
         inputs = outputs
         for layer in reversed(range(self.num_layers)):
             inputs = self.mesh_layers[layer].inverse_transform(inputs)
         inputs = inputs * np.conj(self.phases.input_phase_shift_layer)
         return inputs
 
-    def adjoint_transform(self, inputs: np.ndarray) -> np.ndarray:
-        return self.inverse_transform(inputs)
-
     def propagate(self, inputs: np.ndarray) -> np.ndarray:
+        """
+        Propagate `inputs` for each :math:`\ell < L` (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+
+        .. math::
+            V_{\ell} = V_{\mathrm{in}} \prod_{\ell' = 1}^{\ell} U^{(\ell')},
+
+        where :math:`U \in \mathrm{U}(N)` and :math:`V_{\ell}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Propagation of `inputs` over all :math:`L` layers to form an array
+            :math:`V_{\mathrm{prop}} \in \mathbb{C}^{L \\times M \\times N}`, which is a concatenation of the :math:`V_{\ell}`.
+        """
         outputs = inputs * self.phases.input_phase_shift_layer
         fields = np.zeros((self.num_layers + 1, *outputs.shape), dtype=NP_COMPLEX)
         fields[0] = outputs
@@ -210,6 +332,21 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         return fields
 
     def inverse_propagate(self, outputs: np.ndarray) -> np.ndarray:
+        """
+        Inverse propagate `outputs` for each :math:`\ell < L` (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+
+        .. math::
+            V_{\ell} = V_{\mathrm{out}} \prod_{\ell' = L}^{\ell} (U^{(\ell')})^\dagger,
+
+        where :math:`U \in \mathrm{U}(N)` and :math:`V_{\ell}, V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Propagation of `outputs` over all :math:`L` layers to form an array
+            :math:`V_{\mathrm{prop}} \in \mathbb{C}^{L \\times M \\times N}`, which is a concatenation of the :math:`V_{\ell}`.
+        """
         inputs = outputs
         fields = np.zeros((self.num_layers + 1, *inputs.shape), dtype=NP_COMPLEX)
         for layer in reversed(range(self.num_layers)):
@@ -218,14 +355,13 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         fields[0] = inputs
         return fields
 
-    def adjoint_propagate(self, inputs: np.ndarray) -> np.ndarray:
-        return self.inverse_propagate(inputs)
-
-    def adjoint_variable_gradient(self, inputs: np.ndarray, adjoint_inputs: np.ndarray):
-        raise NotImplementedError("Propagate methods do not yet allow for adjoint variable gradient computation.")
-
     @property
     def phases(self):
+        """
+
+        Returns:
+            The :code:`MeshPhases` object for this layer
+        """
         return MeshPhases(
             theta=self.theta,
             phi=self.phi,

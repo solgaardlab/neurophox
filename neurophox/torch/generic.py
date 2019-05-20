@@ -11,13 +11,6 @@ from ..helpers import pairwise_off_diag_permutation, roll_torch, plot_complex_ma
 
 
 class TransformerLayer(nn.Module):
-    """Base transformer class for transformer layers (invertible functions, usually linear)
-
-    Args:
-        units: Dimension of the input to be transformed by the transformer
-        is_complex: Whether the input to be transformed is complex or not
-        is_trainable: Whether the parameters are trainable
-    """
     def __init__(self, units: int, is_complex: bool=True, is_trainable: bool=False):
         super(TransformerLayer, self).__init__()
         self.units = units
@@ -46,14 +39,6 @@ class TransformerLayer(nn.Module):
 
 
 class CompoundTransformerLayer(TransformerLayer):
-    """Compound transformer class for unitary matrices
-
-    Args:
-        units: Dimension of the input to be transformed by the transformer
-        transformer_list: List of :class:`Transformer` objects to apply to the inputs
-        is_complex: Whether the input to be transformed is complex or not
-        is_trainable: Whether the parameters are trainable
-    """
     def __init__(self, units: int, transformer_list: List[TransformerLayer], is_complex: bool=True,
                  is_trainable: bool=False):
         self.transformer_list = transformer_list
@@ -73,11 +58,6 @@ class CompoundTransformerLayer(TransformerLayer):
 
 
 class PermutationLayer(TransformerLayer):
-    """Permutation layer
-
-    Args:
-        permuted_indices: Name of the scope to define variables being run (to distinguish from other transformers in tensorflow graph)
-    """
     def __init__(self, permuted_indices: np.ndarray):
         super(PermutationLayer, self).__init__(units=len(permuted_indices))
         self.units = len(permuted_indices)
@@ -96,14 +76,6 @@ class PermutationLayer(TransformerLayer):
 class MeshVerticalLayer(TransformerLayer):
     def __init__(self, units: int, diag: torch.Tensor, off_diag: torch.Tensor,
                  perm: PermutationLayer=None, right_perm: PermutationLayer=None):
-        """
-        Args:
-            diag: the diagonal terms to multiply
-            off_diag: the off-diagonal terms to multiply
-            perm: the permutation for the mesh vertical layer (prior to the coupling operation)
-            right_perm: the right permutation for the mesh vertical layer
-                (usually for the final layer and after the coupling operation)
-        """
         self.diag = diag
         self.off_diag = off_diag
         self.perm = perm
@@ -198,11 +170,10 @@ class MeshLayer(TransformerLayer):
         mesh_model: The model of the mesh network (e.g., rectangular, triangular, butterfly)
         is_trainable: Whether variables in this layer are trainable
     """
-    def __init__(self, mesh_model: MeshModel, is_trainable: bool=True):
+    def __init__(self, mesh_model: MeshModel):
         self.mesh = Mesh(mesh_model)
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
-        self.is_trainable = is_trainable
-        self.theta, self.phi, self.gamma = self.mesh.model.init(self.is_trainable, backend=PYTORCH)
+        self.theta, self.phi, self.gamma = self.mesh.model.init(backend=PYTORCH)
         super(MeshLayer, self).__init__(self.units)
 
     def transform(self, inputs: torch.Tensor) -> torch.Tensor:
