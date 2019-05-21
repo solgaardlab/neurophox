@@ -23,8 +23,7 @@ class RectangularPermutationTest(tf.test.TestCase):
     def test(self):
         for units in TEST_DIMENSIONS:
             rp = RectangularPerm(units=units,
-                                 frequency=units // 2,
-                                 parity_odd=True)
+                                 frequency=units // 2)
             self.assertAllClose(rp(rp.inverse_matrix), tf.eye(units))
 
 

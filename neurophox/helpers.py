@@ -316,8 +316,7 @@ def prm_permutation(units: int, tunable_block_sizes: np.ndarray,
     for idx, frequency in enumerate(sampling_frequencies):
         perm_prev = grid_perms[idx][-1]
         perm_next = grid_perms[idx + 1][0]
-        perm = butterfly_permutation(units, frequency) if butterfly \
-            else rectangular_permutation(units, frequency, parity_odd=False)
+        perm = butterfly_permutation(units, frequency) if butterfly else rectangular_permutation(units, frequency)
         glued_perm = glue_permutations(perm_prev, perm)
         glued_perm = glue_permutations(glued_perm, perm_next)
         perms_to_concatenate += [grid_perms[idx][1:-1], glued_perm]
@@ -340,13 +339,11 @@ def butterfly_permutation(units: int, frequency: int):
     return permuted_indices.astype(np.int32)
 
 
-def rectangular_permutation(units: int, frequency: int, parity_odd: bool):
+def rectangular_permutation(units: int, frequency: int):
     unpermuted_indices = np.arange(units)
     frequency_offset = np.empty((units,))
     frequency_offset[::2] = -frequency
     frequency_offset[1::2] = frequency
-    if parity_odd:
-        frequency_offset = -frequency_offset
     permuted_indices = unpermuted_indices + frequency_offset
     for idx in range(units):
         if permuted_indices[idx] < 0:

@@ -1,7 +1,9 @@
-#<img src="https://user-images.githubusercontent.com/7623867/57964848-ae1b0000-78f0-11e9-8cc8-a9ba628c3a89.png" width="50%" class="center">
+<center><img src="https://user-images.githubusercontent.com/7623867/57964848-ae1b0000-78f0-11e9-8cc8-a9ba628c3a89.png" width="50%" alt="Logo"></center>
+
+# 
 
 
-The `neurophox` module is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf) and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
+The Neurophox module is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf) and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
 
 ![neurophox](https://user-images.githubusercontent.com/7623867/57964658-87a79580-78ed-11e9-8f1e-c4af30c32e65.gif)
 
@@ -14,18 +16,18 @@ Orthogonal and unitary neural networks have interesting properties and have been
 
 ## Introduction
 
-`neurophox` provides a robust and general framework for mesh network layers in orthogonal and unitary neural networks. We use an efficient definition for any feedforward mesh architecture, `neurophox.meshmodel.MeshModel`, to develop mesh layer architectures in Numpy (`neurophox.numpy.layers`), Tensorflow 2 (`neurophox.tensorflow.layers`), and (soon) PyTorch.
+Neurophox provides a robust and general framework for mesh network layers in orthogonal and unitary neural networks. We use an efficient definition for any feedforward mesh architecture, `neurophox.meshmodel.MeshModel`, to develop mesh layer architectures in Numpy (`neurophox.numpy.layers`), Tensorflow 2 (`neurophox.tensorflow.layers`), and (soon) PyTorch.
 
-Scattering matrix models used in unitary mesh networks for photonics simulations are provided in `neurophox.components`. The models for all layers are fully defined in `neurophox.meshmodel`, which provides a general framework for efficient implementation of any unitary mesh network.
+Scattering matrix models used in unitary mesh networks for photonics simulations are provided in `neurophox.components`. The models for all layers are fully defined in `neurophox.meshmodel`, which provides a general framework for efficient implementation of any feedforward unitary mesh network.
 
 ## Dependencies and requirements
 
-Some important requirements for `neurophox` are:
+Some important requirements for Neurophox are:
 1. Python >=3.6
 2. Tensorflow 2.0
 3. PyTorch 1.1
 
-The dependencies for `neurophox` (specified in `requirements.txt`) are:
+The dependencies for Neurophox (specified in `requirements.txt`) are:
 ```text
 numpy
 scipy
@@ -38,7 +40,7 @@ torch==1.1
 
 ### Installation
 
-There are currently two options to install `neurophox`:
+There are currently two options to install Neurophox:
 1. Installation via `pip`:
     ```bash
     pip install neurophox
@@ -105,20 +107,20 @@ Triangular mesh:
 The code to generate these visualization examples are provided in [`neurophox-notebooks`](https://github.com/solgaardlab/neurophox-notebooks).
 
 
-#### Small machine learning example
+### Small machine learning example
 
-It is possible to compose `neurophox` Tensorflow layers into unitary neural networks using `Sequential` to solve machine learning problems.
+It is possible to compose Neurophox Tensorflow layers into unitary neural networks using `tf.keras.Sequential` to solve machine learning problems. Here we use absolute value nonlinearities and categorical cross entropy.
 
-![neurophox](https://user-images.githubusercontent.com/7623867/57964849-ae1b0000-78f0-11e9-941f-92682ad460c8.png)
-
+![neurophox](https://user-images.githubusercontent.com/7623867/58128090-b2cf0500-7bcb-11e9-8986-25450bfd68a9.png)
+![neurophox](https://user-images.githubusercontent.com/7623867/58132218-95069d80-7bd5-11e9-9d08-20e1de5c3727.png)
 The code to generate the above example is provided in [`neurophox-notebooks`](https://github.com/solgaardlab/neurophox-notebooks).
 
 
 ## Authors and citing this repository
-`neurophox` was written by Sunil Pai (email: sunilpai@stanford.edu).
+Neurophox was written by Sunil Pai (email: sunilpai@stanford.edu).
 
 If you find this repository useful, please cite at least one of the following papers depending on your application:
-1. Unitary mesh networks:
+1. Optimization of unitary mesh networks:
     ```text
     @article{pai2018matrix,
       title={Matrix optimization on universal unitary photonic devices},
@@ -137,10 +139,17 @@ If you find this repository useful, please cite at least one of the following pa
     }
     ```
 
-## Contributions
+## Future Work and Contributions
 
-`neurophox` is under development and is not yet stable. 
+Neurophox is under development and is not yet stable. 
 
-We welcome pull requests and contributions from the broader community. If you would like to contribute to the codebase, please submit a pull request and title your branch `bug/bug-fix-title` or `feature/feature-title`.
+If you find a bug, have a question, or would like to recommend a feature, please submit an issue on Github.
 
-If you find a bug or would like to recommend a feature, please submit an issue on Github.
+We welcome pull requests and contributions from the broader community. If you would like to contribute, please submit a pull request and title your branch `bug/bug-fix-title` or `feature/feature-title`.
+
+Some future feature ideas include:
+1. Implement multi-wavelength and multi-mode operators for photonics simulation using batch and broadcasting operations.
+2. Add nonlinearities and a unitary mesh-based RNN cell for use in deep learning architectures.
+
+
+

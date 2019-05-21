@@ -20,12 +20,15 @@ class MeshParam:
     @property
     def single_mode_arrangement(self) -> np.ndarray:
         """
-        The single-mode arrangement is one where elements of `param` are on the even rows and all odd rows are zero.
+        The single-mode arrangement based on the :math:`L(\\theta)` transfer matrix for :code:`PhaseShiftUpper`
+        is one where elements of `param` are on the even rows and all odd rows are zero.
 
-        In particular, given the array
-        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N]^T`,
-        the single-mode arrangement has the form
+        In particular, given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
+        where :math:`\\boldsymbol{\\theta}_m` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the single-mode arrangement has the stripe array form
         :math:`\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{0}, \\boldsymbol{\\theta}_2, \\boldsymbol{0}, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{0}]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\theta_{n\ell}` of the final mesh
+        and :math:`\\boldsymbol{0}` represents an array of zeros of the same size as :math:`\\boldsymbol{\\theta}_n`.
 
         Returns:
             Single-mode arrangement array of phases
@@ -35,17 +38,25 @@ class MeshParam:
 
     @property
     def checkerboard_arrangement(self) -> np.ndarray:
+        """
+
+        Returns:
+            Checkerboard arrangement of phases useful for grid mesh structures (e.g. rectangular and triangular meshes)
+        """
         return to_rm_checkerboard(self.param, self.units)
 
     @property
     def common_mode_arrangement(self) -> np.ndarray:
         """
-        The common-mode arrangement is one where elements of `param` are on the even rows and repeated on respective odd rows.
+        The common-mode arrangement based on the :math:`C(\\theta)` transfer matrix for :code:`PhaseShiftCommonMode`
+        is one where elements of `param` are on the even rows and repeated on respective odd rows.
 
-        In particular, given the array
-        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N]^T`,
-        the common-mode arrangement has the form
+        In particular, given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the common-mode arrangement has the stripe array form
         :math:`\\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{\\theta}_N]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\theta_{n\ell}` of the final mesh.
+
 
         Returns:
             Common-mode arrangement array of phases
@@ -57,12 +68,14 @@ class MeshParam:
     @property
     def differential_mode_arrangement(self) -> np.ndarray:
         """
-        The differential-mode arrangement is defined as follows:
+        The differential-mode arrangement is based on the :math:`D(\\theta)` transfer matrix
+        for :code:`PhaseShiftDifferentialMode`.
 
-        Given the array
-        :math:`\\boldsymbol{\\theta} = [\cdots \\boldsymbol{\\theta}_n \cdots]^T`,
-        the differential-mode arrangement has the form
-        :math:`\\widetilde{\\boldsymbol{\\theta}} = \\left[\cdots \\frac{\\boldsymbol{\\theta}_n}{2}, -\\frac{\\boldsymbol{\\theta}_n}{2} \cdots \\right]^T`.
+        Given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\cdots \\boldsymbol{\\theta}_m \cdots]^T`,
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the differential-mode arrangement has the form
+        :math:`\\widetilde{\\boldsymbol{\\theta}} = \\left[\cdots \\frac{\\boldsymbol{\\theta}_m}{2}, -\\frac{\\boldsymbol{\\theta}_m}{2} \cdots \\right]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\theta_{n\ell}` of the final mesh.
 
         Returns:
             Differential-mode arrangement array of phases
@@ -106,12 +119,15 @@ class MeshParamTensorflow:
     @property
     def single_mode_arrangement(self):
         """
-        The single-mode arrangement is one where elements of `param` are on the even rows and all odd rows are zero.
+        The single-mode arrangement based on the :math:`L(\\theta)` transfer matrix for :code:`PhaseShiftUpper`
+        is one where elements of `param` are on the even rows and all odd rows are zero.
 
-        In particular, given the array
-        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N]^T`,
-        the single-mode arrangement has the form
+        In particular, given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
+        where :math:`\\boldsymbol{\\theta}_m` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the single-mode arrangement has the stripe array form
         :math:`\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{0}, \\boldsymbol{\\theta}_2, \\boldsymbol{0}, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{0}]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\theta_{n\ell}` of the final mesh
+        and :math:`\\boldsymbol{0}` represents an array of zeros of the same size as :math:`\\boldsymbol{\\theta}_n`.
 
         Returns:
             Single-mode arrangement array of phases
@@ -122,12 +138,15 @@ class MeshParamTensorflow:
     @property
     def common_mode_arrangement(self) -> tf.Tensor:
         """
-        The common-mode arrangement is one where elements of `param` are on the even rows and repeated on respective odd rows.
+        The common-mode arrangement based on the :math:`C(\\theta)` transfer matrix for :code:`PhaseShiftCommonMode`
+        is one where elements of `param` are on the even rows and repeated on respective odd rows.
 
-        In particular, given the array
-        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N]^T`,
-        the common-mode arrangement has the form
+        In particular, given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the common-mode arrangement has the stripe array form
         :math:`\\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{\\theta}_N]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\theta_{n\ell}` of the final mesh.
+
 
         Returns:
             Common-mode arrangement array of phases
@@ -139,12 +158,14 @@ class MeshParamTensorflow:
     @property
     def differential_mode_arrangement(self) -> tf.Tensor:
         """
-        The differential-mode arrangement is defined as follows:
+        The differential-mode arrangement is based on the :math:`D(\\theta)` transfer matrix
+        for :code:`PhaseShiftDifferentialMode`.
 
-        Given the array
-        :math:`\\boldsymbol{\\theta} = [\cdots \\boldsymbol{\\theta}_n \cdots]^T`,
-        the differential-mode arrangement has the form
-        :math:`\\widetilde{\\boldsymbol{\\theta}} = \\left[\cdots \\frac{\\boldsymbol{\\theta}_n}{2}, -\\frac{\\boldsymbol{\\theta}_n}{2} \cdots \\right]^T`.
+        Given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\cdots \\boldsymbol{\\theta}_m \cdots]^T`,
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the differential-mode arrangement has the form
+        :math:`\\widetilde{\\boldsymbol{\\theta}} = \\left[\cdots \\frac{\\boldsymbol{\\theta}_m}{2}, -\\frac{\\boldsymbol{\\theta}_m}{2} \cdots \\right]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\theta_{n\ell}` of the final mesh.
 
         Returns:
             Differential-mode arrangement array of phases

@@ -212,22 +212,26 @@ class Diagonal(TransformerLayer):
 class RectangularPerm(PermutationLayer):
     """Rectangular permutation layer
 
+    The rectangular permutation layer for a frequency :math:`f` corresponds effectively is equivalent to adding
+    :math:`f` layers of cross state MZIs in a grid configuration to the existing mesh.
+
     Args:
         units: Dimension of the input (number of input waveguide ports), :math:`N`
         frequency: Frequency of interacting mesh wires (waveguides)
-        parity_odd: Whether to start sampling up (even parity means start sampling down)
     """
 
-    def __init__(self, units: int, frequency: int, parity_odd: bool):
+    def __init__(self, units: int, frequency: int):
         self.frequency = frequency
         super(RectangularPerm, self).__init__(
-            permuted_indices=rectangular_permutation(units, frequency, parity_odd))
+            permuted_indices=rectangular_permutation(units, frequency))
 
 
 class ButterflyPerm(PermutationLayer):
     """Butterfly (FFT) permutation layer
 
-    The butterfly or FFT permutation corresponds to
+    The butterfly or FFT permutation for a frequency :math:`f` corresponds to switching all inputs
+    that are :math:`f` inputs apart. This works most cleanly in a butterfly mesh architecture where
+    the number of inputs, :math:`N`, and the freqyencies, :math:`f` are powers of two.
 
     Args:
         units: Dimension of the input (number of input waveguide ports), :math:`N`
