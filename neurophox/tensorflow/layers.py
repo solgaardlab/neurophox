@@ -6,7 +6,7 @@ import numpy as np
 from .generic import TransformerLayer, MeshLayer, CompoundTransformerLayer, PermutationLayer
 from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel
 from ..helpers import rectangular_permutation, butterfly_permutation
-from ..config import BLOCH, TF_FLOAT, TF_COMPLEX
+from ..config import SINGLEMODE, TF_FLOAT, TF_COMPLEX
 
 
 class RM(MeshLayer):
@@ -24,7 +24,7 @@ class RM(MeshLayer):
         activation: Nonlinear activation function (None if there's no nonlinearity)
     """
 
-    def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = BLOCH,
+    def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = SINGLEMODE,
                  bs_error: float = 0.0, theta_init_name: Optional[str]="haar_rect",
                  phi_init_name: Optional[str]="random_phi", gamma_init_name: Optional[str]="random_gamma",
                  include_diagonal_phases=True, activation: tf.keras.layers.Activation = None, **kwargs):
@@ -49,7 +49,7 @@ class TM(MeshLayer):
         activation: Nonlinear activation function (None if there's no nonlinearity)
     """
 
-    def __init__(self, units: int, hadamard: bool = False, basis: str = BLOCH,
+    def __init__(self, units: int, hadamard: bool = False, basis: str = SINGLEMODE,
                  bs_error: float = 0.0, theta_init_name: Optional[str]="haar_rect",
                  phi_init_name: Optional[str]="random_phi", gamma_init_name: Optional[str]="random_gamma",
                  activation: tf.keras.layers.Activation = None, **kwargs):
@@ -65,8 +65,7 @@ class PRM(MeshLayer):
 
     Args:
         units: The dimension of the unitary matrix (:math:`N`) to be modeled by this transformer
-        tunable_layers_per_block: The number of tunable layers per block (overrides :code:`num_tunable_layers_list`,
-        :code:`sampling_frequencies`)
+        tunable_layers_per_block: The number of tunable layers per block (overrides :code:`num_tunable_layers_list`, :code:`sampling_frequencies`)
         num_tunable_layers_list: Number of tunable layers in each block in order from left to right
         sampling_frequencies: Frequencies of sampling frequencies between the tunable layers
         is_trainable: Whether the parameters are trainable
@@ -170,8 +169,7 @@ class Diagonal(TransformerLayer):
     Args:
         units: Dimension of the input (number of input waveguide ports), :math:`N`
         is_complex: Whether to use complex values or not
-        output_units: Dimension of the output (number of output waveguide ports), :math:`M`.
-        If :math:`M < N`, remove last :math:`N - M` elements. If :math:`M > N`, pad with :math:`M - N` zeros.
+        output_units: Dimension of the output (number of output waveguide ports), :math:`M`. If :math:`M < N`, remove last :math:`N - M` elements. If :math:`M > N`, pad with :math:`M - N` zeros.
         pos: Enforce positive definite matrix (only positive singular values)
 
     """
@@ -228,6 +226,8 @@ class RectangularPerm(PermutationLayer):
 
 class ButterflyPerm(PermutationLayer):
     """Butterfly (FFT) permutation layer
+
+    The butterfly or FFT permutation corresponds to
 
     Args:
         units: Dimension of the input (number of input waveguide ports), :math:`N`

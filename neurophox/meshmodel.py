@@ -13,8 +13,7 @@ class MeshModel:
     Args:
         perm_idx: A numpy array of :math:`N \\times L` permutation indices for all layers of the mesh
         hadamard: Whether to use Hadamard convention
-        num_mzis: A numpy array of :math:`L` integers, where for layer :math:`\ell`,
-        :math:`M_\ell \leq \\lfloor N / 2\\rfloor`, used to defined the phase shift mask.
+        num_mzis: A numpy array of :math:`L` integers, where for layer :math:`\ell`, :math:`M_\ell \leq \\lfloor N / 2\\rfloor`, used to defined the phase shift mask.
         bs_error: Beamsplitter error (ignore for pure machine learning applications)
         bs_error_seed: Seed for randomizing beamsplitter error (ignore for pure machine learning applications)
         use_different_errors: Use different errors for the left and right beamsplitter errors

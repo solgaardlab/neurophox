@@ -32,11 +32,11 @@ class MZI(PairwiseUnitary):
         self.epsilon = (epsilon, epsilon) if isinstance(epsilon, float) or isinstance(epsilon, int) else epsilon
 
     @property
-    def reflection_coefficient(self):
+    def reflectivity(self):
         return np.cos(self.internal_upper - self.internal_lower) ** 2
 
     @property
-    def transmission_coefficient(self):
+    def transmissivity(self):
         return np.sin(self.internal_upper - self.internal_lower) ** 2
 
     @property
@@ -61,14 +61,14 @@ class SMMZI(MZI):
     In Hadamard convention, the corresponding transfer matrix is:
 
     .. math::
-        U_2(\\theta, \phi) = H D(\\theta) H L(\phi) = e^{-i \\theta / 2}
+        U_2(\\theta, \phi) = H L(\\theta) H L(\phi) = e^{-i \\theta / 2}
         \\begin{bmatrix} e^{i \phi}\cos \\frac{\\theta}{2} & i\sin \\frac{\\theta}{2} \\\\
         ie^{i \phi}\sin \\frac{\\theta}{2} & \cos \\frac{\\theta}{2} \\end{bmatrix}
 
     In beamsplitter convention, the corresponding transfer matrix is:
 
     .. math::
-        U_2(\\theta, \phi) = B D(\\theta) B L(\phi) = ie^{-i \\theta / 2}
+        U_2(\\theta, \phi) = B L(\\theta) B L(\phi) = ie^{-i \\theta / 2}
         \\begin{bmatrix} e^{i \phi}\sin \\frac{\\theta}{2} & \cos \\frac{\\theta}{2} \\\\
         e^{i \phi}\cos \\frac{\\theta}{2} & -\sin \\frac{\\theta}{2} \\end{bmatrix}
 

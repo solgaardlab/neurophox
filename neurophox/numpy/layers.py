@@ -3,12 +3,12 @@ from typing import Optional, List
 
 from .generic import MeshNumpyLayer
 from ..control import MeshPhases
-from ..config import BLOCH, NP_COMPLEX
+from ..config import SINGLEMODE, NP_COMPLEX
 from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel
 
 
 class RMNumpy(MeshNumpyLayer):
-    def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = BLOCH,
+    def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = SINGLEMODE,
                  bs_error: float = 0.0, phases: Optional[MeshPhases] = None, theta_init_name="haar_rect",
                  phi_init_name="random_phi", gamma_init_name="random_gamma"):
         """Rectangular mesh network layer for unitary operators implemented in numpy
@@ -88,7 +88,7 @@ class RMNumpy(MeshNumpyLayer):
 
 
 class TMNumpy(MeshNumpyLayer):
-    def __init__(self, units: int, hadamard: bool = False, basis: str = BLOCH,
+    def __init__(self, units: int, hadamard: bool = False, basis: str = SINGLEMODE,
                  bs_error: float = 0.0, phases: Optional[MeshPhases] = None,
                  theta_init_name="haar_tri", phi_init_name="random_phi", gamma_init_name="random_gamma"):
         """Triangular mesh network layer for unitary operators implemented in numpy

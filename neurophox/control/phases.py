@@ -8,7 +8,7 @@ from .param import MeshParam, MeshParamTensorflow, MeshParamTorch
 
 
 class MeshPhases:
-    """Organizes the phases in the mesh into appropriate arrangements
+    """Organizes the phases in the mesh into differential or single-mode arrangements depending on :code:`basis`.
 
     Args:
         theta: Array for :code:`theta` to be converted to :math:`\\theta_{n\ell}`
@@ -80,7 +80,7 @@ class MeshPhases:
         Elementwise applying complex exponential to :code:`external_phase_shifts`.
 
         Returns:
-            External phase shift layers corresponding to :math:`\\theta_{n\ell}`
+            External phase shift layers corresponding to :math:`\\phi_{n\ell}`
         """
         return np.exp(1j * self.external_phase_shifts)
 
@@ -170,7 +170,7 @@ class MeshPhasesTensorflow:
         Elementwise applying complex exponential to :code:`external_phase_shifts`.
 
         Returns:
-            External phase shift layers corresponding to :math:`\\theta_{n\ell}`
+            External phase shift layers corresponding to :math:`\\phi_{n\ell}`
         """
         external_ps = self.external_phase_shifts
         return tf.complex(tf.cos(external_ps), tf.sin(external_ps))

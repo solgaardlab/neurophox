@@ -1,4 +1,5 @@
-# ![neurophox](https://user-images.githubusercontent.com/7623867/57964848-ae1b0000-78f0-11e9-8cc8-a9ba628c3a89.png)
+#<img src="https://user-images.githubusercontent.com/7623867/57964848-ae1b0000-78f0-11e9-8cc8-a9ba628c3a89.png" width="50%" class="center">
+
 
 The `neurophox` module is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf) and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
 
@@ -16,6 +17,22 @@ Orthogonal and unitary neural networks have interesting properties and have been
 `neurophox` provides a robust and general framework for mesh network layers in orthogonal and unitary neural networks. We use an efficient definition for any feedforward mesh architecture, `neurophox.meshmodel.MeshModel`, to develop mesh layer architectures in Numpy (`neurophox.numpy.layers`), Tensorflow 2 (`neurophox.tensorflow.layers`), and (soon) PyTorch.
 
 Scattering matrix models used in unitary mesh networks for photonics simulations are provided in `neurophox.components`. The models for all layers are fully defined in `neurophox.meshmodel`, which provides a general framework for efficient implementation of any unitary mesh network.
+
+## Dependencies and requirements
+
+Some important requirements for `neurophox` are:
+1. Python >=3.6
+2. Tensorflow 2.0
+3. PyTorch 1.1
+
+The dependencies for `neurophox` (specified in `requirements.txt`) are:
+```text
+numpy
+scipy
+matplotlib
+tensorflow==2.0
+torch==1.1
+```
 
 ## Getting started
 
@@ -85,7 +102,7 @@ Triangular mesh:
 ![neurophox](https://user-images.githubusercontent.com/7623867/57964853-aeb39680-78f0-11e9-8cd4-1364d2cec339.png)
 
 
-The code to generate these visualization examples are provided in [neurophox notebooks].
+The code to generate these visualization examples are provided in [`neurophox-notebooks`](https://github.com/solgaardlab/neurophox-notebooks).
 
 
 #### Small machine learning example
@@ -94,24 +111,8 @@ It is possible to compose `neurophox` Tensorflow layers into unitary neural netw
 
 ![neurophox](https://user-images.githubusercontent.com/7623867/57964849-ae1b0000-78f0-11e9-941f-92682ad460c8.png)
 
-The code to generate the above example is provided in [neurophox notebooks].
+The code to generate the above example is provided in [`neurophox-notebooks`](https://github.com/solgaardlab/neurophox-notebooks).
 
-
-## Dependencies and requirements
-
-Some important requirements for `neurophox` are:
-1. Python >=3.6
-2. Tensorflow 2.0
-3. PyTorch 1.1
-
-The dependencies for `neurophox` (specified in `requirements.txt`) are:
-```text
-numpy
-scipy
-matplotlib
-tensorflow==2.0
-torch==1.1
-```
 
 ## Authors and citing this repository
 `neurophox` was written by Sunil Pai (email: sunilpai@stanford.edu).

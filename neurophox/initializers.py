@@ -14,12 +14,28 @@ from scipy.stats import rv_discrete
 
 class MeshPhaseInitializer:
     def __init__(self, units: int, num_layers: int):
+        """
+
+        Args:
+            units: Input dimension, :math:`N`
+            num_layers: Number of layers :math:`L`
+        """
         self.units, self.num_layers = units, num_layers
 
     def to_np(self) -> np.ndarray:
+        """
+
+        Returns:
+            Initialized Numpy array
+        """
         raise NotImplementedError('Need to implement numpy initialization')
 
     def to_tf(self, phase_varname: str) -> tf.Variable:
+        """
+
+        Returns:
+            Initialized Tensorflow Variable
+        """
         phase_np = self.to_np()
         return tf.Variable(
             name=phase_varname,
@@ -27,13 +43,27 @@ class MeshPhaseInitializer:
             dtype=TF_FLOAT
         )
 
-    def to_torch(self, is_trainable: bool=True) -> torch.Tensor:
+    def to_torch(self, is_trainable: bool=True) -> Parameter:
+        """
+
+        Returns:
+            Initialized torch Parameter
+        """
         phase_initializer = self.to_np()
         phase = Parameter(torch.tensor(phase_initializer, requires_grad=is_trainable))
         return phase
 
 
 class HaarRandomPhaseInitializer(MeshPhaseInitializer):
+    """
+    Haar-random initialization of rectangular and triangular mesh architectures.
+
+    Args:
+        units: Input dimension, :math:`N`
+        num_layers: Number of layers, :math:`L`
+        hadamard: Whether to use Hadamard convention
+        tri: Initializer for the triangular mesh architecture
+    """
     def __init__(self, units: int, num_layers: int=None, hadamard: bool=False, tri: bool=False):
         self.tri = tri
         if self.tri:
@@ -56,6 +86,15 @@ class HaarRandomPhaseInitializer(MeshPhaseInitializer):
 
 class PRMPhaseInitializer(MeshPhaseInitializer):
     def __init__(self, units: int, hadamard: bool, tunable_layers_per_block: Optional[int]=None):
+        """
+        A useful initialization of permuting mesh architectures based on the Haar random initialization above.
+        This currently only works if using default permuting mesh architecture or setting :math:`tunable_layers_per_block`.
+
+        Args:
+            units: Input dimension, :math:`N`
+            hadamard: Whether to use Hadamard convention
+            tunable_layers_per_block: Number of tunable layers per block (same behavior as :code:`PermutingRectangularMeshModel`).
+        """
         self.tunable_block_sizes, _ = get_default_coarse_grain_block_sizes(units) if tunable_layers_per_block is None \
             else get_efficient_coarse_grain_block_sizes(units, tunable_layers_per_block)
         self.hadamard = hadamard
@@ -78,6 +117,16 @@ class PRMPhaseInitializer(MeshPhaseInitializer):
 
 class UniformRandomPhaseInitializer(MeshPhaseInitializer):
     def __init__(self, units: int, num_layers: int, max_phase, min_phase: float=0):
+        """
+        Defines a uniform random initializer up to some maximum phase,
+        e.g. :math:`\\theta \in [0, \pi]` or :math:`\phi \in [0, 2\pi)`.
+
+        Args:
+            units: Input dimension, :math:`N`.
+            num_layers: Number of layers, :math:`L`.
+            max_phase: Maximum phase
+            min_phase: Minimum phase (usually 0)
+        """
         self.units = units
         self.num_layers = units
         self.max_phase = max_phase
@@ -106,8 +155,16 @@ class OrthoHaarRandomPhaseInitializer(MeshPhaseInitializer):
             theta[1::2, :-1] = theta_1
         return theta.astype(NP_FLOAT)
 
+
 class ConstantPhaseInitializer(MeshPhaseInitializer):
     def __init__(self, units: int, num_layers: int, constant_phase: float):
+        """
+
+        Args:
+            units: Input dimension, :math:`N`
+            num_layers: Number of layers, :math:`L`
+            constant_phase: The constant phase to set all array elements
+        """
         self.constant_phase = constant_phase
         super(ConstantPhaseInitializer, self).__init__(units, num_layers)
 

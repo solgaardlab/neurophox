@@ -19,7 +19,8 @@ def clements_decomposition(unitary: np.ndarray, hadamard: bool=False,
         pbar_handle: Useful for larger matrices
 
     Returns:
-        Clements decomposition of `unitary` :math:`U`.
+        Clements decomposition of unitary matrix :math:`U` in terms of :math:`\\theta_{n\ell}`, :math:`\\phi_{n\ell}`,
+        :math:`\gamma_{n}`.
 
     """
     hadamard = hadamard
@@ -59,18 +60,6 @@ def clements_decomposition(unitary: np.ndarray, hadamard: bool=False,
     theta_checkerboard = to_absolute_theta(theta_checkerboard).T
     phi_checkerboard = np.mod(phi_checkerboard, 2 * np.pi)
     return theta_checkerboard, phi_checkerboard, np.diag(unitary_hat)  # not quite the same as the model in MeshPhases
-
-
-def to_absolute_theta_tf(theta: tf.Tensor) -> tf.Tensor:
-    theta = tf.math.mod(theta, 2 * np.pi)
-    theta = tf.where(tf.greater(theta, np.pi), 2 * np.pi * tf.ones_like(theta) - theta, theta)
-    return theta
-
-
-def to_absolute_theta(theta: np.ndarray) -> np.ndarray:
-    theta = np.mod(theta, 2 * np.pi)
-    theta[theta > np.pi] = 2 * np.pi - theta[theta > np.pi]
-    return theta
 
 
 def to_rm_checkerboard(nparray: np.ndarray, units: int):
@@ -189,6 +178,18 @@ def to_rm_checkerboard_torch(tensor_0: torch.Tensor, tensor_1: torch.Tensor):
         checkerboard[1::2, 1::2] = tensor_1.transpose(0, 1)
         checkerboard = torch.cat([checkerboard, torch.zeros(1, num_layers, batch_size)], dim=0)
     return checkerboard
+
+
+def to_absolute_theta_tf(theta: tf.Tensor) -> tf.Tensor:
+    theta = tf.math.mod(theta, 2 * np.pi)
+    theta = tf.where(tf.greater(theta, np.pi), 2 * np.pi * tf.ones_like(theta) - theta, theta)
+    return theta
+
+
+def to_absolute_theta(theta: np.ndarray) -> np.ndarray:
+    theta = np.mod(theta, 2 * np.pi)
+    theta[theta > np.pi] = 2 * np.pi - theta[theta > np.pi]
+    return theta
 
 
 def roll_tensor(tensor: tf.Tensor, up=False):
@@ -371,19 +372,6 @@ def grid_permutation(units: int, num_layers: int):
                       permuted_indices.astype(np.int32)))
 
 
-def pairwise_off_diag_permutation(units: int):
-    ordered_idx = np.arange(units)
-    perm_idx = np.zeros_like(ordered_idx)
-    if units % 2:
-        perm_idx[:-1][::2] = ordered_idx[1::2]
-        perm_idx[1::2] = ordered_idx[:-1][::2]
-        perm_idx[-1] = ordered_idx[-1]
-    else:
-        perm_idx[::2] = ordered_idx[1::2]
-        perm_idx[1::2] = ordered_idx[::2]
-    return perm_idx.astype(np.int32)
-
-
 def plot_complex_matrix(plt, matrix: np.ndarray):
     plt.figure(figsize=(15, 5), dpi=200)
     plt.subplot(131)
@@ -425,3 +413,15 @@ def inverse_permutation(permuted_indices: np.ndarray):
         inv_permuted_indices[perm_idx] = idx
     return inv_permuted_indices
 
+
+def pairwise_off_diag_permutation(units: int):
+    ordered_idx = np.arange(units)
+    perm_idx = np.zeros_like(ordered_idx)
+    if units % 2:
+        perm_idx[:-1][::2] = ordered_idx[1::2]
+        perm_idx[1::2] = ordered_idx[:-1][::2]
+        perm_idx[-1] = ordered_idx[-1]
+    else:
+        perm_idx[::2] = ordered_idx[1::2]
+        perm_idx[1::2] = ordered_idx[::2]
+    return perm_idx.astype(np.int32)

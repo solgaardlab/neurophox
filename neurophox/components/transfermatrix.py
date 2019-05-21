@@ -11,33 +11,38 @@ class PairwiseUnitary:
     This can be considered also a two-port unitary linear optical component
     (e.g. unitary scattering matrix for waveguide modal interaction).
 
-    Notes:
-        By default, this class uses the identity matrix as the unitary
-        and implements the transform and givens rotation on an input
-        given whatever unitary definition is specified in the constructor
+    This unitary matrix :math:`U_2` has the following form:
+
+    .. math::
+        U_2 = \\begin{bmatrix} U_{11} & U_{12} \\\ U_{21} & U_{22} \\end{bmatrix},
+
+    where we define the reflectivity :math:`r = |U_{11}|^2 = |U_{22}|^2` and transmissivity
+    :math:`t = |U_{12}|^2 = |U_{21}|^2`. We also require that the determinant :math:`|\\det U| = 1`,
+    from which we ultimately get the property :math:`U_2^\dagger U_2 = I_2`, where :math:`I_2` is the
+    :math:`2 \\times 2` identity matrix. All children of this class have this property.
 
     Args:
-        dtype: Cast values as `dtype` for this pairwise unitary operator
+        dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
     def __init__(self, dtype=NP_COMPLEX):
         self.dtype = dtype
 
     @property
-    def reflection_coefficient(self):
+    def reflectivity(self):
         """
 
         Returns:
-            Reflection coefficient, :math:`r`, or reflectivity of :math:`2 \\times 2` transfer matrix
+            Reflectivity, :math:`r`, for the matrix :math:`U`
         """
         raise NotImplementedError("Need to override this method in child class.")
 
     @property
-    def transmission_coefficient(self):
+    def transmissivity(self):
         """
 
         Returns:
-            Transmission coefficient, :math:`t`, or transmissivity of :math:`2 \\times 2` transfer matrix
+            Transmissivity, :math:`t`, for the matrix :math:`U`
         """
         raise NotImplementedError("Need to override this method in child class.")
 
@@ -55,11 +60,7 @@ class PairwiseUnitary:
         return self.matrix.conj().T
 
     def givens_rotation(self, units: int, m: int, n: Optional[int]=None, i_factor=False) -> np.ndarray:
-        """Givens rotation matrix
-
-        Notes:
-            If trying to transform an input vector with a Givens rotation, you can use the `transform` method.
-            This method just returns the Givens rotation matrix.
+        """Givens rotation matrix :math:`T_{m, n}` which rotates any vector about axes :math:`m, n`.
 
         Args:
             units: Input dimension to rotate
@@ -69,7 +70,6 @@ class PairwiseUnitary:
 
         Returns:
             np.ndarray: the Givens rotation matrix
-
         """
         if n is None:
             n = m + 1
@@ -82,32 +82,6 @@ class PairwiseUnitary:
         givens_rotation[n][m] = unitary[1, 0] * (i_factor * 1j + (1 - i_factor))
         givens_rotation[n][n] = unitary[1, 1] * (i_factor * 1j + (1 - i_factor))
         return givens_rotation
-
-    def transform(self, input_vector: np.ndarray, m: int, n: Optional[int]=None) -> np.ndarray:
-        """Transform an input vector
-
-        Notes:
-            If trying to transform an input vector with a Givens rotation, you can use the `transform` method.
-            This method just returns the Givens rotation matrix.
-
-        Args:
-            input_vector: Input vector to transform
-            m: Lower index to rotate
-            n: Upper index to rotate, requires :math:`n > m` (defaults to `None`, which implies :math:`n = m + 1`)
-
-        Returns:
-            np.ndarray: the Givens rotation matrix
-
-        """
-        if n is None:
-            n = m + 1
-        if not m < n:
-            raise ValueError('Require m < n')
-        transformed_vector = input_vector
-        transformed_coordinates = self.matrix @ np.asarray([input_vector[m], input_vector[n]], dtype=self.dtype)
-        transformed_vector[m] = transformed_coordinates[0]
-        transformed_vector[n] = transformed_coordinates[1]
-        return transformed_vector
 
 
 class Beamsplitter(PairwiseUnitary):
@@ -138,7 +112,7 @@ class Beamsplitter(PairwiseUnitary):
     Args:
         hadamard: Amplitude-modulating phase shift
         epsilon: Errors for beamsplitter operator
-        dtype: Cast values as `dtype` for this pairwise unitary operator
+        dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
     def __init__(self, hadamard: bool, epsilon: float=0, dtype=NP_COMPLEX):
@@ -147,17 +121,17 @@ class Beamsplitter(PairwiseUnitary):
         self.epsilon = epsilon
 
     @property
-    def reflection_coefficient(self):
+    def reflectivity(self):
         return 0.5 + self.epsilon / 2
 
     @property
-    def transmission_coefficient(self):
+    def transmissivity(self):
         return 0.5 - self.epsilon / 2
 
     @property
     def matrix(self):
-        r = np.sqrt(self.reflection_coefficient)
-        t = np.sqrt(self.transmission_coefficient)
+        r = np.sqrt(self.reflectivity)
+        t = np.sqrt(self.transmissivity)
         if self.hadamard:
             return np.array([
                 [r, t],
@@ -180,7 +154,7 @@ class PhaseShiftUpper(PairwiseUnitary):
 
     Args:
         phase_shift: Phase shift :math:`\\theta`
-        dtype: Cast values as `dtype` for this pairwise unitary operator
+        dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):
@@ -205,7 +179,7 @@ class PhaseShiftLower(PairwiseUnitary):
 
     Args:
         phase_shift: Phase shift :math:`\\theta`
-        dtype: Cast values as `dtype` for this pairwise unitary operator
+        dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):
@@ -230,7 +204,7 @@ class PhaseShiftDifferentialMode(PairwiseUnitary):
 
     Args:
         phase_shift: Phase shift :math:`\\theta`
-        dtype: Cast values as `dtype` for this pairwise unitary operator
+        dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):
@@ -255,7 +229,7 @@ class PhaseShiftCommonMode(PairwiseUnitary):
 
     Args:
         phase_shift: Phase shift :math:`\\theta`
-        dtype: Cast values as `dtype` for this pairwise unitary operator
+        dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):

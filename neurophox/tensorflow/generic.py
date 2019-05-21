@@ -111,7 +111,7 @@ class CompoundTransformerLayer(TransformerLayer):
             inputs: Input batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Transformation of `inputs`, :math:`V_{\mathrm{out}}`
+            Transformed `inputs`, :math:`V_{\mathrm{out}}`
         """
         outputs = inputs
         for transformer in self.transformer_list:
@@ -119,6 +119,19 @@ class CompoundTransformerLayer(TransformerLayer):
         return outputs
 
     def inverse_transform(self, outputs: tf.Tensor) -> tf.Tensor:
+        """Outputs are inverse-transformed by :math:`L` transformer layers :math:`T^{(\ell)} \in \mathbb{C}^{N \\times N}` as follows:
+
+        .. math::
+            V_{\mathrm{in}} = V_{\mathrm{out}} \prod_{\ell=L}^1 T_\ell^{-1},
+
+        where :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            outputs: Output batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Transformed `outputs`, :math:`V_{\mathrm{in}}`
+        """
         inputs = outputs
         for transformer in self.transformer_list[::-1]:
             inputs = transformer.inverse_transform(inputs)
@@ -150,7 +163,7 @@ class PermutationLayer(TransformerLayer):
             inputs: Input batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Permutation of `inputs`, :math:`V_{\mathrm{out}}`
+            Permuted `inputs`, :math:`V_{\mathrm{out}}`
         """
         return tf.gather(inputs, self.permuted_indices, axis=-1)
 
@@ -168,7 +181,7 @@ class PermutationLayer(TransformerLayer):
             outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Permutation of `outputs`, :math:`V_{\mathrm{in}}`
+            Permuted `outputs`, :math:`V_{\mathrm{in}}`
         """
         return tf.gather(outputs, self.inv_permuted_indices, axis=-1)
 
@@ -203,7 +216,7 @@ class MeshVerticalLayer(TransformerLayer):
             inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Propagation of `inputs` through single layer :math:`\ell` to form an array
+            Propaged `inputs` through single layer :math:`\ell` to form an array
             :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
         """
         outputs = inputs if self.perm is None else self.perm.transform(inputs)
@@ -222,7 +235,7 @@ class MeshVerticalLayer(TransformerLayer):
             outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Inverse propagation of `outputs` through single layer :math:`\ell` to form an array
+            Inverse propaged `outputs` through single layer :math:`\ell` to form an array
             :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
         """
         inputs = outputs if self.right_perm is None else self.right_perm.inverse_transform(outputs)
@@ -317,7 +330,7 @@ class MeshLayer(TransformerLayer):
             inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Forward transformation of `inputs`, :math:`V_{\mathrm{out}}`
+            Transformed `inputs`, :math:`V_{\mathrm{out}}`
         """
         mesh_phases, mesh_layers = self.phases_and_layers
         outputs = inputs * mesh_phases.input_phase_shift_layer if self.include_diagonal_phases else inputs
@@ -339,7 +352,7 @@ class MeshLayer(TransformerLayer):
             outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Inverse transformation of `outputs`, :math:`V_{\mathrm{in}}`
+            Inverse transformed `outputs`, :math:`V_{\mathrm{in}}`
         """
         mesh_phases, mesh_layers = self.phases_and_layers
         inputs = outputs
