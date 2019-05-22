@@ -10,6 +10,8 @@ The Neurophox module is an open source machine learning and photonic simulation 
 
 ![neurophox](https://user-images.githubusercontent.com/7623867/57976056-57fb9a80-798c-11e9-9aef-8d1f07af7ca7.gif)
 
+
+[![Build Status](https://travis-ci.com/solgaardlab/neurophox.svg?branch=master)](https://travis-ci.com/solgaardlab/neurophox)
 ## Motivation
 
 Orthogonal and unitary neural networks have interesting properties and have been studied for synthetic natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). Furthermore, new energy-efficient photonic technologies are being built to realize unitary mesh-based neural networks using light as the computing medium as opposed to conventional analog electronics.

@@ -19,8 +19,8 @@ def clements_decomposition(unitary: np.ndarray, hadamard: bool=False,
         pbar_handle: Useful for larger matrices
 
     Returns:
-        Clements decomposition of unitary matrix :math:`U` in terms of :math:`\\boldsymbol{\\theta}`, :math:`\\boldsymbol{\\phi}`,
-        :math:`\\boldsymbol{\\gamma}`.
+        Clements decomposition of unitary matrix :math:`U` in terms of
+        :math:`\\boldsymbol{\\theta}`, :math:`\\boldsymbol{\\phi}`, :math:`\\boldsymbol{\\gamma}`.
 
     """
     hadamard = hadamard
@@ -274,18 +274,6 @@ def get_alpha_checkerboard_general(units: int, num_layers: int):
         alpha_checkerboards.append(
             get_alpha_checkerboard(units, extra_layers, flipud=not num_layers // units % 2 and units % 2))
     return np.hstack(alpha_checkerboards)
-
-
-def get_smn_checkerboard(units: int, num_layers: int, include_off_mesh: bool=False):
-    smn_checkerboard = np.zeros((units - 1, num_layers))
-    for i in range(units - 1):
-        for j in range(num_layers):
-            if (i + j) % 2 == 0:
-                smn_checkerboard[i, j] = get_smn_rank(i, j, units, num_layers)
-            else:
-                if include_off_mesh:
-                    smn_checkerboard[i, j] = 1
-    return smn_checkerboard
 
 
 def get_efficient_coarse_grain_block_sizes(units: int, tunable_layers_per_block: int=2, use_cg_sequence: bool=True):

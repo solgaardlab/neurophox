@@ -1,7 +1,7 @@
 language: python
 python: 3.6
 install:
-  pip install -r requirements.txt  # Install requirements
+  pip install --quiet -r requirements.txt  # Install requirements
 script:
   python -m unittest discover -v
 deploy:
@@ -11,3 +11,5 @@ deploy:
     secure: QdY7eX8n/C4Nb7Lm/CvwO4vNltTaeVS0XuJV3kA4fvuFNCtXkfi7Bg85lkpHX/IPhe0A8SR3IT4UdwpSYR7iKPw0iM3/+eboaGuQREQ59Vi0+X85oY4oYnebJFMZ61FhHFwBmVi1pQ6IgNqNqLmG+y1ni3Op2ZDpECabjIjnEhr5SRD0j98DIT9K29QKdbBTokLf0Xb7jMXtYn+dU8401eFv+NrCXFUm6xQ0C7MPPaWTi0QxWHBkoc8acA9t20QlJoj63EufJOFA8nKSxzp3Phmzstobj/82vshl9glDb1tHKKyw/Y+zL3JVaNneYKcoR5CGThfqhsi8MklGZRGWB2/LiLlHA52u8UGfFBFk4IWhTbM6LQCYYCofzbQBsDjDvbP3W/20oGz2Oay8vD4pXEUjjjb772tdNrCeT+QFOYNAF07P1UcgHceVw7fGO0w2grniIqqlNmCcqfSBOFZtQLp7fhE/FtLxlrNZ39OLFG8LU39+f+X7U3bc1hnqfgWMlFQK0ofwq2GSjk7AZpMuobLlJXNkXUYpMPaejhIBTzVLz3AsDeU5+nC0Qji+LM6IIWnLzMvhLm2zm3cI9l9EUpi9zqYmSaKu3W8OPLgTUZ7u9cyTVarMCI7u3N88CUFsxlBx4hch6K4jnolWUH7JakkYOf2N/Ix6Uiqo/lgBAao=
   on:
     branch: master
+    tags: true
+    python: 3.6
