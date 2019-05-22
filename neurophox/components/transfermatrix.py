@@ -29,7 +29,7 @@ class PairwiseUnitary:
         self.dtype = dtype
 
     @property
-    def reflectivity(self):
+    def reflectivity(self) -> float:
         """
 
         Returns:
@@ -38,7 +38,7 @@ class PairwiseUnitary:
         raise NotImplementedError("Need to override this method in child class.")
 
     @property
-    def transmissivity(self):
+    def transmissivity(self) -> float:
         """
 
         Returns:
@@ -47,7 +47,7 @@ class PairwiseUnitary:
         raise NotImplementedError("Need to override this method in child class.")
 
     @property
-    def matrix(self):
+    def matrix(self) -> np.ndarray:
         """
 
         Returns:
@@ -56,7 +56,7 @@ class PairwiseUnitary:
         raise NotImplementedError("Need to override this method in child class.")
 
     @property
-    def inverse_matrix(self):
+    def inverse_matrix(self) -> np.ndarray:
         return self.matrix.conj().T
 
     def givens_rotation(self, units: int, m: int, n: Optional[int]=None, i_factor=False) -> np.ndarray:
@@ -69,7 +69,7 @@ class PairwiseUnitary:
             i_factor: multiply by i (useful for Clements and Reck decompositions)
 
         Returns:
-            np.ndarray: the Givens rotation matrix
+            The Givens rotation matrix
         """
         if n is None:
             n = m + 1
@@ -121,15 +121,15 @@ class Beamsplitter(PairwiseUnitary):
         self.epsilon = epsilon
 
     @property
-    def reflectivity(self):
+    def reflectivity(self) -> float:
         return 0.5 + self.epsilon / 2
 
     @property
-    def transmissivity(self):
+    def transmissivity(self) -> float:
         return 0.5 - self.epsilon / 2
 
     @property
-    def matrix(self):
+    def matrix(self) -> np.ndarray:
         r = np.sqrt(self.reflectivity)
         t = np.sqrt(self.transmissivity)
         if self.hadamard:
@@ -162,7 +162,7 @@ class PhaseShiftUpper(PairwiseUnitary):
         self.phase_shift = phase_shift
 
     @property
-    def matrix(self):
+    def matrix(self) -> np.ndarray:
         return np.array([
             [np.exp(1j * self.phase_shift), 0],
             [0, 1]
@@ -172,7 +172,7 @@ class PhaseShiftUpper(PairwiseUnitary):
 class PhaseShiftLower(PairwiseUnitary):
     """Lower phase shift operator
 
-    Implements the upper phase shift operator :math:`L(\\theta)` given phase :math:`\\theta`:
+    Implements the lower phase shift operator :math:`R(\\theta)` given phase :math:`\\theta`:
 
     .. math::
         R(\\theta) = \\begin{bmatrix} 1 & 0\\\ 0 & e^{i\\theta} \\end{bmatrix}
@@ -187,7 +187,7 @@ class PhaseShiftLower(PairwiseUnitary):
         self.phase_shift = phase_shift
 
     @property
-    def matrix(self):
+    def matrix(self) -> np.ndarray:
         return np.array([
             [1, 0],
             [0, np.exp(1j * self.phase_shift)]
@@ -197,7 +197,7 @@ class PhaseShiftLower(PairwiseUnitary):
 class PhaseShiftDifferentialMode(PairwiseUnitary):
     """Differential phase shift operator
 
-    Implements the upper phase shift operator :math:`L(\\theta)` given phase :math:`\\theta`:
+    Implements the differential-mode phase shift operator :math:`D(\\theta)` given phase :math:`\\theta`:
 
     .. math::
         D(\\theta) = \\begin{bmatrix} e^{i\\theta / 2} & 0\\\ 0 & e^{-i\\theta/2} \\end{bmatrix}
@@ -212,7 +212,7 @@ class PhaseShiftDifferentialMode(PairwiseUnitary):
         self.phase_shift = phase_shift
 
     @property
-    def matrix(self):
+    def matrix(self) -> np.ndarray:
         return np.array([
             [np.exp(1j * self.phase_shift / 2), 0],
             [0, np.exp(-1j * self.phase_shift / 2)]
@@ -222,7 +222,7 @@ class PhaseShiftDifferentialMode(PairwiseUnitary):
 class PhaseShiftCommonMode(PairwiseUnitary):
     """Common mode phase shift operator
 
-    Implements the upper phase shift operator :math:`L(\\theta)` given phase :math:`\\theta`:
+    Implements the common-mode phase shift operator :math:`C(\\theta)` given phase :math:`\\theta`:
 
     .. math::
         C(\\theta) = \\begin{bmatrix} e^{i\\theta} & 0\\\ 0 & e^{i\\theta} \\end{bmatrix}
@@ -237,7 +237,7 @@ class PhaseShiftCommonMode(PairwiseUnitary):
         self.phase_shift = phase_shift
 
     @property
-    def matrix(self):
+    def matrix(self) -> np.ndarray:
         return np.array([
             [np.exp(1j * self.phase_shift), 0],
             [0, np.exp(1j * self.phase_shift)]

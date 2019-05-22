@@ -8,12 +8,12 @@ from .param import MeshParam, MeshParamTensorflow, MeshParamTorch
 
 
 class MeshPhases:
-    """Organizes the phases in the mesh into differential or single-mode arrangements depending on :code:`basis`.
+    """Arranges the phases in the mesh appropriately depending on :code:`basis` using the :code:`MeshParam` class.
 
     Args:
-        theta: Array for :code:`theta` to be converted to :math:`\\theta_{n\ell}`
-        phi: Array for :code:`phi` to be converted to :math:`\\phi_{n\ell}`
-        gamma: Array for :code:`gamma` to be converted to :math:`\gamma_{n}`
+        theta: Array for :code:`theta` to be converted to :math:`\\boldsymbol{\\theta}`
+        phi: Array for :code:`phi` to be converted to :math:`\\boldsymbol{\\phi}`
+        gamma: Array for :code:`gamma` to be converted to :math:`\\boldsymbol{\gamma}`
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
@@ -38,7 +38,7 @@ class MeshPhases:
         (in between beamsplitters, thus internal) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
 
         Returns:
-            Internal phase shift matrix corresponding to :math:`\\theta_{n\ell}`
+            Internal phase shift matrix corresponding to :math:`\\boldsymbol{\\theta}`
         """
         if self.basis == BLOCH:
             return self.theta.differential_mode_arrangement
@@ -55,7 +55,7 @@ class MeshPhases:
         (outside of beamsplitters, thus external) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
 
         Returns:
-            External phase shift matrix corresponding to :math:`\\phi_{n\ell}`
+            External phase shift matrix corresponding to :math:`\\boldsymbol{\\phi}`
         """
         if self.basis == BLOCH or self.basis == SINGLEMODE:
             return self.phi.single_mode_arrangement
@@ -69,7 +69,7 @@ class MeshPhases:
         Elementwise applying complex exponential to :code:`internal_phase_shifts`.
 
         Returns:
-            Internal phase shift layers corresponding to :math:`\\theta_{n\ell}`
+            Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
         """
         return np.exp(1j * self.internal_phase_shifts)
 
@@ -80,7 +80,7 @@ class MeshPhases:
         Elementwise applying complex exponential to :code:`external_phase_shifts`.
 
         Returns:
-            External phase shift layers corresponding to :math:`\\phi_{n\ell}`
+            External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
         """
         return np.exp(1j * self.external_phase_shifts)
 
@@ -101,9 +101,9 @@ class MeshPhasesTensorflow:
     """Organizes the phases in the mesh into appropriate arrangements
 
     Args:
-        theta: Array for :code:`theta` to be converted to :math:`\\theta_{n\ell}`
-        phi: Array for :code:`phi` to be converted to :math:`\\phi_{n\ell}`
-        gamma: Array for :code:`gamma` to be converted to :math:`\gamma_{n}`
+        theta: Array for :code:`theta` to be converted to :math:`\\boldsymbol{\\theta}`
+        phi: Array for :code:`phi` to be converted to :math:`\\boldsymbol{\\phi}`
+        gamma: Array for :code:`gamma` to be converted to :math:`\\boldsymbol{\gamma}`
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
@@ -127,7 +127,7 @@ class MeshPhasesTensorflow:
         (in between beamsplitters, thus internal) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
 
         Returns:
-            Internal phase shift matrix corresponding to :math:`\\theta_{n\ell}`
+            Internal phase shift matrix corresponding to :math:`\\boldsymbol{\\theta}`
         """
         if self.basis == BLOCH:
             return self.theta.differential_mode_arrangement
@@ -144,7 +144,7 @@ class MeshPhasesTensorflow:
         (outside of beamsplitters, thus external) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
 
         Returns:
-            External phase shift matrix corresponding to :math:`\\phi_{n\ell}`
+            External phase shift matrix corresponding to :math:`\\boldsymbol{\\phi}`
         """
         if self.basis == BLOCH or self.basis == SINGLEMODE:
             return self.phi.single_mode_arrangement
@@ -158,7 +158,7 @@ class MeshPhasesTensorflow:
         Elementwise applying complex exponential to :code:`internal_phase_shifts`.
 
         Returns:
-            Internal phase shift layers corresponding to :math:`\\theta_{n\ell}`
+            Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
         """
         internal_ps = self.internal_phase_shifts
         return tf.complex(tf.cos(internal_ps), tf.sin(internal_ps))
@@ -170,7 +170,7 @@ class MeshPhasesTensorflow:
         Elementwise applying complex exponential to :code:`external_phase_shifts`.
 
         Returns:
-            External phase shift layers corresponding to :math:`\\phi_{n\ell}`
+            External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
         """
         external_ps = self.external_phase_shifts
         return tf.complex(tf.cos(external_ps), tf.sin(external_ps))

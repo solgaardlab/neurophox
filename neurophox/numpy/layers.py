@@ -20,9 +20,9 @@ class RMNumpy(MeshNumpyLayer):
             basis: Phase basis to use
             bs_error: Beamsplitter split ratio error
             phases: The MeshPhases control parameters for the mesh
-            theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
-            phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
-            gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
+            theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+            phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+            gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
         """
         super(RMNumpy, self).__init__(
             RectangularMeshModel(units, num_layers, hadamard, bs_error, basis,
@@ -137,8 +137,8 @@ class PRMNumpy(MeshNumpyLayer):
             num_tunable_layers_list: Number of tunable layers in each block in order from left to right
             sampling_frequencies: Frequencies of sampling frequencies between the tunable layers
             bs_error: Photonic error in the beamsplitter
-            theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
-            phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
+            theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+            phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         """
         if theta_init_name == 'haar_prm' and tunable_layers_per_block is not None:
             raise NotImplementedError('haar_prm initializer is incompatible with setting tunable_layers_per_block.')

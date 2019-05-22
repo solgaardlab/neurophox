@@ -17,9 +17,9 @@ class MeshModel:
         bs_error: Beamsplitter error (ignore for pure machine learning applications)
         bs_error_seed: Seed for randomizing beamsplitter error (ignore for pure machine learning applications)
         use_different_errors: Use different errors for the left and right beamsplitter errors
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
     """
     def __init__(self, perm_idx: np.ndarray, hadamard: bool = False, num_mzis: Optional[np.ndarray] = None,
@@ -58,7 +58,7 @@ class MeshModel:
             backend: Whether to use Numpy, Tensorflow, or PyTorch (not yet supported, will throw error).
 
         Returns:
-            Numpy arrays or Tensorflow variables corresponding to :math:`\\theta_{n\ell}, \phi_{n\ell}, \gamma_n`.
+            Numpy arrays or Tensorflow variables corresponding to :math:`\\boldsymbol{\\theta}, \\boldsymbol{\\phi}, \gamma_n`.
         """
         theta_init = get_initializer(self.units, self.num_layers, self.theta_init_name, self.hadamard)
         phi_init = get_initializer(self.units, self.num_layers, self.phi_init_name, self.hadamard)
@@ -133,9 +133,9 @@ class RectangularMeshModel(MeshModel):
         hadamard: Hadamard convention
         bs_error: Beamsplitter layer
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, bs_error: float = 0.0,
                  basis: str = BLOCH, theta_init_name: str = "haar_rect", phi_init_name: str = "random_phi",
@@ -165,9 +165,9 @@ class TriangularMeshModel(MeshModel):
         hadamard: Hadamard convention
         bs_error: Beamsplitter layer
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
     def __init__(self, units: int, hadamard: bool = False, bs_error: float = 0.0, basis: str = BLOCH,
                  theta_init_name: str = "haar_tri", phi_init_name: str = "random_phi",
@@ -197,9 +197,9 @@ class ButterflyMeshModel(MeshModel):
         hadamard: Hadamard convention
         bs_error: Beamsplitter layer
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
     def __init__(self, num_layers: int, hadamard: bool = False, bs_error: float = 0.0):
         super(ButterflyMeshModel, self).__init__(np.vstack(
@@ -219,9 +219,9 @@ class PermutingRectangularMeshModel(MeshModel):
         sampling_frequencies: Frequencies of sampling frequencies between the tunable layers
         bs_error: Photonic error in the beamsplitter
         hadamard: Whether to use hadamard convention (otherwise use beamsplitter convention)
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
 
     def __init__(self, units: int, tunable_layers_per_block: int = None,

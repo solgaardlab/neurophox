@@ -19,8 +19,8 @@ def clements_decomposition(unitary: np.ndarray, hadamard: bool=False,
         pbar_handle: Useful for larger matrices
 
     Returns:
-        Clements decomposition of unitary matrix :math:`U` in terms of :math:`\\theta_{n\ell}`, :math:`\\phi_{n\ell}`,
-        :math:`\gamma_{n}`.
+        Clements decomposition of unitary matrix :math:`U` in terms of :math:`\\boldsymbol{\\theta}`, :math:`\\boldsymbol{\\phi}`,
+        :math:`\\boldsymbol{\\gamma}`.
 
     """
     hadamard = hadamard

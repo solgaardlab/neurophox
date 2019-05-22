@@ -18,10 +18,10 @@ class RM(MeshLayer):
         hadamard: Hadamard convention for the beamsplitters
         basis: Phase basis to use
         bs_error: Beamsplitter split ratio error
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
-        activation: Nonlinear activation function (None if there's no nonlinearity)
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
+        activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = SINGLEMODE,
@@ -43,10 +43,10 @@ class TM(MeshLayer):
         hadamard: Hadamard convention for the beamsplitters
         basis: Phase basis to use
         bs_error: Beamsplitter split ratio error
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
-        activation: Nonlinear activation function (None if there's no nonlinearity)
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
+        activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
     def __init__(self, units: int, hadamard: bool = False, basis: str = SINGLEMODE,
@@ -70,10 +70,10 @@ class PRM(MeshLayer):
         sampling_frequencies: Frequencies of sampling frequencies between the tunable layers
         is_trainable: Whether the parameters are trainable
         bs_error: Photonic error in the beamsplitter
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\gamma_{n}`)
-        activation: Nonlinear activation function (None if there's no nonlinearity)
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
+        activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
     def __init__(self, units: int, tunable_layers_per_block: int = None,
@@ -104,7 +104,7 @@ class SVD(CompoundTransformerLayer):
         mesh_dict: The name and properties of the mesh layer used for the SVD
         output_units: The dimension of the output (:math:`N`) of the :math:`M \\times N` matrix to be modelled by the SVD
         pos_singular_values: Whether to allow only positive singular values
-        activation: Nonlinear activation function (None if there's no nonlinearity)
+        activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
     def __init__(self, units: int, mesh_dict: Dict, output_units: Optional[int] = None, pos_singular_values: bool = False,
@@ -231,7 +231,7 @@ class ButterflyPerm(PermutationLayer):
 
     The butterfly or FFT permutation for a frequency :math:`f` corresponds to switching all inputs
     that are :math:`f` inputs apart. This works most cleanly in a butterfly mesh architecture where
-    the number of inputs, :math:`N`, and the freqyencies, :math:`f` are powers of two.
+    the number of inputs, :math:`N`, and the frequencies, :math:`f` are powers of two.
 
     Args:
         units: Dimension of the input (number of input waveguide ports), :math:`N`

@@ -116,7 +116,7 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
 
     def transform(self, inputs: np.ndarray):
         """
-        Propagate `inputs` through single layer :math:`\ell < L`
+        Propagate :code:`inputs` through single layer :math:`\ell < L`
         (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
 
         .. math::
@@ -125,10 +125,10 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
         where :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+            inputs: :code:`inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Propagation of `inputs` through single layer :math:`\ell` to form an array
+            Propagation of :code:`inputs` through single layer :math:`\ell` to form an array
             :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
         """
         if self.perm_idx is None:
@@ -142,7 +142,7 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
 
     def inverse_transform(self, outputs: np.ndarray):
         """
-        Inverse-propagate `inputs` through single layer :math:`\ell < L`
+        Inverse-propagate :code:`inputs` through single layer :math:`\ell < L`
         (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
 
         .. math::
@@ -151,10 +151,10 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
         where :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+            outputs: :code:`outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Inverse propagation of `outputs` through single layer :math:`\ell` to form an array
+            Inverse propagation of :code:`outputs` through single layer :math:`\ell` to form an array
             :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
         """
         if self.right_perm_idx is None:
@@ -180,7 +180,7 @@ class MeshNumpy:
         """
 
         Args:
-            phases: The :code:`MeshPhases` object containing :math:`\\theta_{n\ell}, \phi_{n\ell}, \gamma_{n}`
+            phases: The :code:`MeshPhases` object containing :math:`\\boldsymbol{\\theta}, \\boldsymbol{\\phi}, \\boldsymbol{\\gamma}`
             use_different_errors: use different errors for the left and right beamsplitters
 
         Returns:
@@ -276,10 +276,10 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         where :math:`U \in \mathrm{U}(N)` and :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+            inputs: :code:`inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Forward transformation of `inputs`
+            Forward transformation of :code:`inputs`
         """
         outputs = inputs * self.phases.input_phase_shift_layer
         for layer in range(self.num_layers):
@@ -296,10 +296,10 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         where :math:`U \in \mathrm{U}(N)` and :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+            outputs: :code:`outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Inverse transformation of `outputs`
+            Inverse transformation of :code:`outputs`
         """
         inputs = outputs
         for layer in reversed(range(self.num_layers)):
@@ -309,7 +309,7 @@ class MeshNumpyLayer(TransformerNumpyLayer):
 
     def propagate(self, inputs: np.ndarray) -> np.ndarray:
         """
-        Propagate `inputs` for each :math:`\ell < L` (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+        Propagate :code:`inputs` for each :math:`\ell < L` (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
 
         .. math::
             V_{\ell} = V_{\mathrm{in}} \prod_{\ell' = 1}^{\ell} U^{(\ell')},
@@ -317,10 +317,10 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         where :math:`U \in \mathrm{U}(N)` and :math:`V_{\ell}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+            inputs: :code:`inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Propagation of `inputs` over all :math:`L` layers to form an array
+            Propagation of :code:`inputs` over all :math:`L` layers to form an array
             :math:`V_{\mathrm{prop}} \in \mathbb{C}^{L \\times M \\times N}`, which is a concatenation of the :math:`V_{\ell}`.
         """
         outputs = inputs * self.phases.input_phase_shift_layer
@@ -333,7 +333,7 @@ class MeshNumpyLayer(TransformerNumpyLayer):
 
     def inverse_propagate(self, outputs: np.ndarray) -> np.ndarray:
         """
-        Inverse propagate `outputs` for each :math:`\ell < L` (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+        Inverse propagate :code:`outputs` for each :math:`\ell < L` (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
 
         .. math::
             V_{\ell} = V_{\mathrm{out}} \prod_{\ell' = L}^{\ell} (U^{(\ell')})^\dagger,
@@ -341,10 +341,10 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         where :math:`U \in \mathrm{U}(N)` and :math:`V_{\ell}, V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+            outputs: :code:`outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Propagation of `outputs` over all :math:`L` layers to form an array
+            Propagation of :code:`outputs` over all :math:`L` layers to form an array
             :math:`V_{\mathrm{prop}} \in \mathbb{C}^{L \\times M \\times N}`, which is a concatenation of the :math:`V_{\ell}`.
         """
         inputs = outputs

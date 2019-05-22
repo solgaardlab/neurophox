@@ -6,14 +6,32 @@ from .transfermatrix import PairwiseUnitary
 
 
 class MZI(PairwiseUnitary):
-    """Ideal Beamsplitter Mach-Zehnder Interferometer
+    """Mach-Zehnder Interferometer
 
     Class simulating the scattering matrix formulation of an ideal phase-shifting Mach-Zehnder interferometer.
-    This can implement any :math:`2 \\times 2` unitary operator in :math:`\mathrm{U}(2)`.
+    This can implement any :math:`2 \\times 2` unitary operator :math:`U_2 \in \mathrm{U}(2)`.
+
+    The internal phase shifts, :math:`\\theta_1, \\theta_2`, and the external phase shifts :math:`\phi_1, \phi_2`, are
+    used to define the final unitary operator as follows (where we define :math:`\\theta := \\theta_1- \\theta_2`
+    for convenience):
+
+    In Hadamard convention, the corresponding transfer matrix is:
+
+    .. math::
+        U_2(\\theta, \phi) = H L(\\theta_1) R(\\theta_2) H L(\\phi_1) R(\\phi_2) = e^{i\\frac{\\theta_1 + \\theta_2}{2}}
+        \\begin{bmatrix} e^{i \phi_1}\cos \\frac{\\theta}{2} & ie^{i \phi_2}\sin \\frac{\\theta}{2} \\\\
+        ie^{i \phi_1}\sin \\frac{\\theta}{2} & e^{i \phi_2}\cos \\frac{\\theta}{2} \\end{bmatrix}
+
+    In beamsplitter convention, the corresponding transfer matrix is:
+
+    .. math::
+        U_2(\\theta, \phi) = B L(\\theta_1) R(\\theta_2) B L(\\phi_1) R(\\phi_2) = i e^{i\\frac{\\theta_1 + \\theta_2}{2}}
+        \\begin{bmatrix} e^{i \phi_1}\sin \\frac{\\theta}{2} & e^{i \phi_2}\cos \\frac{\\theta}{2} \\\\
+        e^{i \phi_1}\cos \\frac{\\theta}{2} & -e^{i \phi_2}\sin \\frac{\\theta}{2} \\end{bmatrix}
 
     Args:
         internal_upper: Upper internal phase shift
-        internal_lower: Upper internal phase shift
+        internal_lower: Lower internal phase shift
         external_upper: Upper external phase shift
         external_lower: Lower external phase shift
         hadamard: Whether to use Hadamard convention
@@ -53,7 +71,7 @@ class MZI(PairwiseUnitary):
 
 
 class SMMZI(MZI):
-    """Ideal Beamsplitter Mach-Zehnder Interferometer (single-mode basis)
+    """Mach-Zehnder Interferometer (single-mode basis)
 
     Class simulating an ideal phase-shifting Mach-Zehnder interferometer.
     As usual in our simulation environment, we have :math:`\\theta \in [0, \pi]` and :math:`\phi \in [0, 2\pi)`.
@@ -96,7 +114,7 @@ class SMMZI(MZI):
 
 
 class BlochMZI(MZI):
-    """Ideal Beamsplitter Mach-Zehnder Interferometer (Bloch basis)
+    """Mach-Zehnder Interferometer (Bloch basis, named after the Bloch sphere qubit formula)
 
     Class simulating an ideal phase-shifting Mach-Zehnder interferometer.
     As usual in our simulation environment, we have :math:`\\theta \in [0, \pi]` and :math:`\phi \in [0, 2\pi)`.
@@ -139,7 +157,22 @@ class BlochMZI(MZI):
 
 
 def get_mzi_transfer_matrix(internal_upper: float, internal_lower: float, external_upper: float, external_lower: float,
-                            epsilon: Tuple[float, float], hadamard: float, dtype):
+                            hadamard: float, epsilon: Tuple[float, float], dtype) -> np.ndarray:
+    """
+
+    Args:
+        internal_upper: Upper internal phase shift
+        internal_lower: Lower internal phase shift
+        external_upper: Upper external phase shift
+        external_lower: Lower external phase shift
+        hadamard: Whether to use Hadamard convention
+        epsilon: Beamsplitter error
+        dtype: Type-casting to use for the matrix elements
+
+    Returns:
+        MZI transfer matrix
+
+    """
     epp = np.sqrt(1 + epsilon[0]) * np.sqrt(1 + epsilon[1])
     epn = np.sqrt(1 + epsilon[0]) * np.sqrt(1 - epsilon[1])
     enp = np.sqrt(1 - epsilon[0]) * np.sqrt(1 + epsilon[1])

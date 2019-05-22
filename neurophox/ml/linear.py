@@ -124,6 +124,18 @@ def generate_keras_batch(units, target_unitary, batch_size):
 
 
 def complex_mse(y_true, y_pred):
+    """
+
+    Args:
+        y_true: The true labels, :math:`V \in \mathbb{C}^{B \\times N}`
+        y_pred: The true labels, :math:`\\widehat{V} \in \mathbb{C}^{B \\times N}`
+
+    Returns:
+        The complex mean squared error :math:`\\boldsymbol{e} \in \mathbb{R}^B`,
+        where given example :math:`\\widehat{V}_i \in \mathbb{C}^N`,
+        we have :math:`e_i = \\frac{\|V_i - \\widehat{V}_i\|^2}{N}`.
+
+    """
     real_loss = tf.losses.mse(tf.math.real(y_true), tf.math.real(y_pred))
     imag_loss = tf.losses.mse(tf.math.imag(y_true), tf.math.imag(y_pred))
     return (real_loss + imag_loss) / 2

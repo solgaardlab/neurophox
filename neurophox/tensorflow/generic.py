@@ -15,7 +15,7 @@ class TransformerLayer(tf.keras.layers.Layer):
     Args:
         units: Dimension of the input to be transformed by the transformer
         is_complex: Whether the input to be transformed is complex or not
-        activation: Nonlinear activation function (None if there's no nonlinearity)
+        activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
     def __init__(self, units: int, is_complex: bool = True, activation: tf.keras.layers.Activation = None, **kwargs):
         self.units = units
@@ -111,7 +111,7 @@ class CompoundTransformerLayer(TransformerLayer):
             inputs: Input batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Transformed `inputs`, :math:`V_{\mathrm{out}}`
+            Transformed :code:`inputs`, :math:`V_{\mathrm{out}}`
         """
         outputs = inputs
         for transformer in self.transformer_list:
@@ -130,7 +130,7 @@ class CompoundTransformerLayer(TransformerLayer):
             outputs: Output batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Transformed `outputs`, :math:`V_{\mathrm{in}}`
+            Transformed :code:`outputs`, :math:`V_{\mathrm{in}}`
         """
         inputs = outputs
         for transformer in self.transformer_list[::-1]:
@@ -163,7 +163,7 @@ class PermutationLayer(TransformerLayer):
             inputs: Input batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Permuted `inputs`, :math:`V_{\mathrm{out}}`
+            Permuted :code:`inputs`, :math:`V_{\mathrm{out}}`
         """
         return tf.gather(inputs, self.permuted_indices, axis=-1)
 
@@ -178,10 +178,10 @@ class PermutationLayer(TransformerLayer):
         :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+            outputs: :code:`outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Permuted `outputs`, :math:`V_{\mathrm{in}}`
+            Permuted :code:`outputs`, :math:`V_{\mathrm{in}}`
         """
         return tf.gather(outputs, self.inv_permuted_indices, axis=-1)
 
@@ -206,17 +206,17 @@ class MeshVerticalLayer(TransformerLayer):
 
     def transform(self, inputs: tf.Tensor):
         """
-        Propagate `inputs` through single layer :math:`\ell < L`
+        Propagate :code:`inputs` through single layer :math:`\ell < L`
         (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
 
         .. math::
             V_{\mathrm{out}} = V_{\mathrm{in}} U^{(\ell')},
 
         Args:
-            inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+            inputs: :code:`inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Propaged `inputs` through single layer :math:`\ell` to form an array
+            Propaged :code:`inputs` through single layer :math:`\ell` to form an array
             :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
         """
         outputs = inputs if self.perm is None else self.perm.transform(inputs)
@@ -225,17 +225,17 @@ class MeshVerticalLayer(TransformerLayer):
 
     def inverse_transform(self, outputs: tf.Tensor):
         """
-        Inverse-propagate `inputs` through single layer :math:`\ell < L`
+        Inverse-propagate :code:`inputs` through single layer :math:`\ell < L`
         (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
 
         .. math::
             V_{\mathrm{in}} = V_{\mathrm{out}} (U^{(\ell')})^\dagger,
 
         Args:
-            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+            outputs: :code:`outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Inverse propaged `outputs` through single layer :math:`\ell` to form an array
+            Inverse propaged :code:`outputs` through single layer :math:`\ell` to form an array
             :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
         """
         inputs = outputs if self.right_perm is None else self.right_perm.inverse_transform(outputs)
@@ -263,7 +263,7 @@ class Mesh:
         """
 
         Args:
-            phases:  The :code:`MeshPhasesTensorflow` object containing :math:`\\theta_{n\ell}, \phi_{n\ell}, \gamma_{n}`
+            phases:  The :code:`MeshPhasesTensorflow` object containing :math:`\\boldsymbol{\\theta}, \\boldsymbol{\\phi}, \\boldsymbol{\\gamma}`
 
         Returns:
             List of mesh layers to be used by any instance of :code:`MeshLayer`
@@ -305,7 +305,7 @@ class MeshLayer(TransformerLayer):
 
     Args:
         mesh_model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
-        activation: Nonlinear activation function (None if there's no nonlinearity)
+        activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
     def __init__(self, mesh_model: MeshModel,  activation: tf.keras.layers.Activation = None,
@@ -327,10 +327,10 @@ class MeshLayer(TransformerLayer):
         where :math:`U \in \mathrm{U}(N)` and :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            inputs: `inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+            inputs: :code:`inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Transformed `inputs`, :math:`V_{\mathrm{out}}`
+            Transformed :code:`inputs`, :math:`V_{\mathrm{out}}`
         """
         mesh_phases, mesh_layers = self.phases_and_layers
         outputs = inputs * mesh_phases.input_phase_shift_layer if self.include_diagonal_phases else inputs
@@ -349,10 +349,10 @@ class MeshLayer(TransformerLayer):
         where :math:`U \in \mathrm{U}(N)` and :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            outputs: `outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+            outputs: :code:`outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
 
         Returns:
-            Inverse transformed `outputs`, :math:`V_{\mathrm{in}}`
+            Inverse transformed :code:`outputs`, :math:`V_{\mathrm{in}}`
         """
         mesh_phases, mesh_layers = self.phases_and_layers
         inputs = outputs
