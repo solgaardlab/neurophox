@@ -8,4 +8,4 @@ __pycache__
 .env*
 .idea
 .DS_Store
-data/*
+doc/build/*

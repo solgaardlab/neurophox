@@ -109,7 +109,31 @@ The code to generate these visualization examples are provided in [`neurophox-no
 
 ### Small machine learning example
 
-It is possible to compose Neurophox Tensorflow layers into unitary neural networks using `tf.keras.Sequential` to solve machine learning problems. Here we use absolute value nonlinearities and categorical cross entropy.
+It is possible to compose Neurophox Tensorflow layers into unitary neural networks using `tf.keras.Sequential`
+to solve machine learning problems. Here we use absolute value nonlinearities and categorical cross entropy.
+
+```python
+import tensorflow as tf
+from neurophox.tensorflow import RM
+from neurophox.ml.nonlinearities import cnorm, cnormsq
+
+ring_model = tf.keras.Sequential([
+    RM(3, activation=tf.keras.layers.Activation(cnorm)),
+    RM(3, activation=tf.keras.layers.Activation(cnorm)),
+    RM(3, activation=tf.keras.layers.Activation(cnorm)),
+    RM(3, activation=tf.keras.layers.Activation(cnorm)),
+    tf.keras.layers.Activation(cnormsq),
+    tf.keras.layers.Lambda(lambda x: tf.math.real(x[:, :2])), # get first 2 output ports (we already know it is real from the activation),
+    tf.keras.layers.Activation('softmax')
+])
+
+ring_model.compile(
+    loss='categorical_crossentropy',
+    optimizer=tf.keras.optimizers.Adam(lr=0.0025)
+)
+```
+
+Below is a visualization for many planar classification problems:
 
 ![neurophox](https://user-images.githubusercontent.com/7623867/58128090-b2cf0500-7bcb-11e9-8986-25450bfd68a9.png)
 ![neurophox](https://user-images.githubusercontent.com/7623867/58132218-95069d80-7bd5-11e9-9d08-20e1de5c3727.png)

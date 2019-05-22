@@ -168,7 +168,6 @@ class MeshLayer(TransformerLayer):
 
     Args:
         mesh_model: The model of the mesh network (e.g., rectangular, triangular, butterfly)
-        is_trainable: Whether variables in this layer are trainable
     """
     def __init__(self, mesh_model: MeshModel):
         self.mesh = Mesh(mesh_model)

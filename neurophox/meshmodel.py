@@ -190,16 +190,12 @@ class ButterflyMeshModel(MeshModel):
 
     The butterfly mesh contains :math:`L` layers and :math:`N = 2^L` inputs/outputs to implement :math:`U \in \mathrm{U}(N)`.
     Unlike the triangular and full (:math:`L = N`) rectangular mesh, the butterfly mesh is not universal. However,
-    it has attractive properties for near-term photonic implementations of unitary mesh models.
+    it has attractive properties for efficient machine learning and compact photonic implementations of unitary mesh models.
 
     Args:
         num_layers: Number of layers, :math:`L`
         hadamard: Hadamard convention
         bs_error: Beamsplitter layer
-        basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
     def __init__(self, num_layers: int, hadamard: bool = False, bs_error: float = 0.0):
         super(ButterflyMeshModel, self).__init__(np.vstack(

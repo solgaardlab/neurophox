@@ -6,8 +6,8 @@ project_name = "neurophox"
 requirements = [
     "numpy",
     "scipy",
-    "torch==1.1",
-    "tensorflow==2.0"
+    "torch>=1.1",
+    "tensorflow>=2.0"
 ]
 
 setup(
@@ -24,5 +24,6 @@ setup(
         'Natural Language :: English',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
-    )
+    ),
+    install_requires=requirements
 )
