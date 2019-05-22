@@ -15,12 +15,12 @@ NP_FLOAT = np.float64
 TF_COMPLEX = tf.complex64
 TF_FLOAT = tf.float32
 
-# Seed (for testing)
+# Test seed
 
-GLOBAL_SEED = None
 TEST_SEED = 31415
 
 # Phase basis
 
 BLOCH = "bloch"
 SINGLEMODE = "sm"
+DEFAULT_BASIS = BLOCH

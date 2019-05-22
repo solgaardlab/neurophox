@@ -61,7 +61,7 @@ exclude_patterns = []
 html_theme_path = ["_themes"]
 html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
-	"logo_only": True
+    "logo_only": True
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -69,6 +69,7 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 html_logo = "neurophox-logo.png"
+
 
 def setup(app):
     app.add_stylesheet('css/custom.css')

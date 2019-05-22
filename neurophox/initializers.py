@@ -6,7 +6,7 @@ from torch.nn.parameter import Parameter
 
 import numpy as np
 
-from .config import TF_FLOAT, NP_FLOAT, GLOBAL_SEED
+from .config import TF_FLOAT, NP_FLOAT, TEST_SEED
 from .helpers import get_alpha_checkerboard_general, get_default_coarse_grain_block_sizes,\
     get_efficient_coarse_grain_block_sizes
 from scipy.stats import rv_discrete
@@ -134,26 +134,8 @@ class UniformRandomPhaseInitializer(MeshPhaseInitializer):
         super(UniformRandomPhaseInitializer, self).__init__(units, num_layers)
 
     def to_np(self) -> np.ndarray:
-        if GLOBAL_SEED is not None:
-            np.random.seed(GLOBAL_SEED)
         phase = (self.max_phase - self.min_phase) * np.random.rand(self.num_layers, self.units // 2) + self.min_phase
         return phase.astype(NP_FLOAT)
-
-
-class OrthoHaarRandomPhaseInitializer(MeshPhaseInitializer):
-    def __init__(self, units: int, num_layers: int=None, hadamard: bool=False):
-        self.hadamard = hadamard
-        super(OrthoHaarRandomPhaseInitializer, self).__init__(units, num_layers)
-
-    def to_np(self) -> np.ndarray:
-        theta_0, theta_1 = get_ortho_haar_theta(self.units, self.num_layers, hadamard=self.hadamard)
-        theta = np.zeros((self.num_layers, self.units // 2))
-        theta[:, ::2] = theta_0
-        if self.units % 2:
-            theta[1::2, :] = theta_1
-        else:
-            theta[1::2, :-1] = theta_1
-        return theta.astype(NP_FLOAT)
 
 
 class ConstantPhaseInitializer(MeshPhaseInitializer):
@@ -172,10 +154,10 @@ class ConstantPhaseInitializer(MeshPhaseInitializer):
         return self.constant_phase * np.ones((self.units, self.num_layers))
 
 
-def get_haar_theta(units: int, num_layers: int, hadamard: bool, tri: bool=False,
-                   seed: int=GLOBAL_SEED) -> Union[Tuple[np.ndarray, np.ndarray],
-                                                   Tuple[tf.Variable, tf.Variable],
-                                                   tf.Variable]:
+def get_haar_theta(units: int, num_layers: int, hadamard: bool,
+                   tri: bool=False) -> Union[Tuple[np.ndarray, np.ndarray],
+                                             Tuple[tf.Variable, tf.Variable],
+                                             tf.Variable]:
     if tri:
         alpha_rows = np.repeat(np.linspace(1, units - 1, units - 1)[:, np.newaxis], units * 2 - 3, axis=1).T
         theta_0_root = 2 * alpha_rows[::2, ::2]
@@ -184,8 +166,6 @@ def get_haar_theta(units: int, num_layers: int, hadamard: bool, tri: bool=False,
         alpha_checkerboard = get_alpha_checkerboard_general(units, num_layers)
         theta_0_root = 2 * alpha_checkerboard.T[::2, ::2]
         theta_1_root = 2 * alpha_checkerboard.T[1::2, 1::2]
-    if seed is not None:
-        np.random.seed(seed)
     theta_0_init = 2 * np.arcsin(np.random.rand(*theta_0_root.shape) ** (1 / theta_0_root))
     theta_1_init = 2 * np.arcsin(np.random.rand(*theta_1_root.shape) ** (1 / theta_1_root))
     if not hadamard:
@@ -194,15 +174,13 @@ def get_haar_theta(units: int, num_layers: int, hadamard: bool, tri: bool=False,
     return theta_0_init.astype(dtype=NP_FLOAT), theta_1_init.astype(dtype=NP_FLOAT)
 
 
-def get_ortho_haar_theta(units: int, num_layers: int, hadamard: bool,
-                         seed: int=GLOBAL_SEED, num_samples: int=10000) -> Union[Tuple[np.ndarray, np.ndarray],
-                                                                                 Tuple[tf.Variable, tf.Variable],
-                                                                                 tf.Variable]:
+def get_ortho_haar_theta(units: int, num_layers: int,
+                         hadamard: bool, num_samples: int=10000) -> Union[Tuple[np.ndarray, np.ndarray],
+                                                                          Tuple[tf.Variable, tf.Variable],
+                                                                          tf.Variable]:
     alpha_checkerboard = get_alpha_checkerboard_general(units, num_layers)
     theta_0_root = alpha_checkerboard.T[::2, ::2] - 1
     theta_1_root = alpha_checkerboard.T[1::2, 1::2] - 1
-    if seed is not None:
-        np.random.seed(seed)
     theta_0_init = np.zeros_like(theta_0_root)
     theta_1_init = np.zeros_like(theta_1_root)
     for i in range(units):
@@ -223,7 +201,9 @@ def get_ortho_haar_theta(units: int, num_layers: int, hadamard: bool,
 
 
 def get_initializer(units: int, num_layers: int, initializer_name: str,
-                    hadamard: bool=False) -> MeshPhaseInitializer:
+                    hadamard: bool=False, testing: bool=False) -> MeshPhaseInitializer:
+    if testing:
+        np.random.seed(TEST_SEED)
     initializer_name_to_initializer = {
         'haar_rect': HaarRandomPhaseInitializer(units, num_layers, hadamard),
         'haar_tri': HaarRandomPhaseInitializer(units, num_layers, hadamard, tri=True),

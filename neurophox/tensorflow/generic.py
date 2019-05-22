@@ -308,7 +308,7 @@ class MeshLayer(TransformerLayer):
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
-    def __init__(self, mesh_model: MeshModel,  activation: tf.keras.layers.Activation = None,
+    def __init__(self, mesh_model: MeshModel, activation: tf.keras.layers.Activation = None,
                  include_diagonal_phases: bool = True, **kwargs):
         self.mesh = Mesh(mesh_model)
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers

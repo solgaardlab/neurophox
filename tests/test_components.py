@@ -12,13 +12,6 @@ np.random.seed(TEST_SEED)
 RANDOM_THETA = float(np.pi * 2 * np.random.rand())
 
 
-class LinearOpticalComponentTest(tf.test.TestCase):
-    def test(self):
-        loc = PairwiseUnitary()
-        self.assertAllClose(loc.matrix @ loc.inverse_matrix, IDENTITY)
-        self.assertAllClose(loc.matrix.conj().T, loc.inverse_matrix)
-
-
 class PhaseShiftTest(tf.test.TestCase):
     def test_upper(self):
         ps = PhaseShiftUpper(RANDOM_PHASE_SHIFT)
@@ -86,7 +79,6 @@ class MZITest(tf.test.TestCase):
                 self.assertAllClose(mzi.matrix.conj().T, mzi.inverse_matrix)
                 self.assertAllClose(np.linalg.det(mzi.matrix), np.exp(1j * (RANDOM_PHASE_SHIFT + RANDOM_THETA)))
                 self.assertAllClose(mzi.matrix, bs.matrix @ internal_ps.matrix @ bs.matrix @ external_ps_upper.matrix)
-
 
 
 if __name__ == '__main__':

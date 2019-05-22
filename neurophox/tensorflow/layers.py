@@ -6,7 +6,7 @@ import numpy as np
 from .generic import TransformerLayer, MeshLayer, CompoundTransformerLayer, PermutationLayer
 from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel
 from ..helpers import rectangular_permutation, butterfly_permutation
-from ..config import SINGLEMODE, TF_FLOAT, TF_COMPLEX
+from ..config import DEFAULT_BASIS, TF_FLOAT, TF_COMPLEX
 
 
 class RM(MeshLayer):
@@ -24,7 +24,7 @@ class RM(MeshLayer):
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
-    def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = SINGLEMODE,
+    def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = DEFAULT_BASIS,
                  bs_error: float = 0.0, theta_init_name: Optional[str]="haar_rect",
                  phi_init_name: Optional[str]="random_phi", gamma_init_name: Optional[str]="random_gamma",
                  include_diagonal_phases=True, activation: tf.keras.layers.Activation = None, **kwargs):
@@ -49,8 +49,8 @@ class TM(MeshLayer):
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
-    def __init__(self, units: int, hadamard: bool = False, basis: str = SINGLEMODE,
-                 bs_error: float = 0.0, theta_init_name: Optional[str]="haar_rect",
+    def __init__(self, units: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
+                 bs_error: float = 0.0, theta_init_name: Optional[str]="haar_tri",
                  phi_init_name: Optional[str]="random_phi", gamma_init_name: Optional[str]="random_gamma",
                  activation: tf.keras.layers.Activation = None, **kwargs):
         super(TM, self).__init__(
@@ -79,7 +79,7 @@ class PRM(MeshLayer):
     def __init__(self, units: int, tunable_layers_per_block: int = None,
                  num_tunable_layers_list: Optional[List[int]] = None, sampling_frequencies: Optional[List[int]] = None,
                  bs_error: float = 0.0, hadamard: bool = False,
-                 theta_init_name: Optional[str] = "haar_rect", phi_init_name: Optional[str] = "random_phi",
+                 theta_init_name: Optional[str] = "haar_prm", phi_init_name: Optional[str] = "random_phi",
                  gamma_init_name: Optional[str] = "random_gamma",
                  activation: tf.keras.layers.Activation = None, **kwargs):
         if theta_init_name == 'haar_prm' and tunable_layers_per_block is not None:
@@ -111,7 +111,7 @@ class SVD(CompoundTransformerLayer):
                  activation: tf.keras.layers.Activation = None):
         self.units = units
         self.output_units = output_units if output_units is not None else units
-        if output_units != units:
+        if output_units != units and output_units is not None:
             raise NotImplementedError("Still working out a clean implementation of non-square linear operators.")
         self.mesh_name = mesh_dict['name']
         self.mesh_properties = mesh_dict.get('properties', {})

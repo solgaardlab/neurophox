@@ -4,7 +4,7 @@ import tensorflow as tf
 from .helpers import butterfly_permutation, grid_permutation, to_stripe_array, prm_permutation, \
     get_efficient_coarse_grain_block_sizes, get_default_coarse_grain_block_sizes
 from .initializers import get_initializer
-from .config import BLOCH, GLOBAL_SEED, TF_COMPLEX, NUMPY, TFKERAS
+from .config import BLOCH, TF_COMPLEX, NUMPY, TFKERAS, TEST_SEED
 
 
 class MeshModel:
@@ -15,7 +15,7 @@ class MeshModel:
         hadamard: Whether to use Hadamard convention
         num_mzis: A numpy array of :math:`L` integers, where for layer :math:`\ell`, :math:`M_\ell \leq \\lfloor N / 2\\rfloor`, used to defined the phase shift mask.
         bs_error: Beamsplitter error (ignore for pure machine learning applications)
-        bs_error_seed: Seed for randomizing beamsplitter error (ignore for pure machine learning applications)
+        testing: Use a seed for randomizing error (ignore for pure machine learning applications)
         use_different_errors: Use different errors for the left and right beamsplitter errors
         theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
         phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
@@ -23,7 +23,7 @@ class MeshModel:
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
     """
     def __init__(self, perm_idx: np.ndarray, hadamard: bool = False, num_mzis: Optional[np.ndarray] = None,
-                 bs_error: float = 0.0, bs_error_seed: int = GLOBAL_SEED, use_different_errors: bool = False,
+                 bs_error: float = 0.0, testing: bool = False, use_different_errors: bool = False,
                  theta_init_name: str = "random_theta", phi_init_name: str = "random_phi",
                  gamma_init_name: str = "random_gamma", basis: str = BLOCH):
 
@@ -36,7 +36,7 @@ class MeshModel:
         self.num_mzis = num_mzis
         self.hadamard = hadamard
         self.bs_error = bs_error
-        self.bs_error_seed = bs_error_seed
+        self.testing = testing
         self.use_different_errors = use_different_errors
         self.mask = np.zeros((self.num_layers, self.units // 2))
         self.theta_init_name = theta_init_name
@@ -60,9 +60,9 @@ class MeshModel:
         Returns:
             Numpy arrays or Tensorflow variables corresponding to :math:`\\boldsymbol{\\theta}, \\boldsymbol{\\phi}, \gamma_n`.
         """
-        theta_init = get_initializer(self.units, self.num_layers, self.theta_init_name, self.hadamard)
-        phi_init = get_initializer(self.units, self.num_layers, self.phi_init_name, self.hadamard)
-        gamma_init = get_initializer(self.units, self.num_layers, self.gamma_init_name, self.hadamard)
+        theta_init = get_initializer(self.units, self.num_layers, self.theta_init_name, self.hadamard, self.testing)
+        phi_init = get_initializer(self.units, self.num_layers, self.phi_init_name, self.hadamard, self.testing)
+        gamma_init = get_initializer(self.units, self.num_layers, self.gamma_init_name, self.hadamard, self.testing)
         if backend == NUMPY:
             return theta_init.to_np(), phi_init.to_np(), gamma_init.to_np()
         elif backend == TFKERAS:
@@ -79,8 +79,8 @@ class MeshModel:
         Returns:
             Error numpy arrays for "beamsplitter layers."
         """
-        if self.bs_error_seed is not None:
-            np.random.seed(right + self.bs_error_seed)
+        if self.testing:
+            np.random.seed(right + TEST_SEED)
         mask = self.mask if self.mask is not None else np.ones((self.num_layers, self.units // 2))
         return np.random.randn(self.num_layers, self.units // 2) * self.bs_error * mask
 
@@ -91,13 +91,13 @@ class MeshModel:
         Returns:
             Error numpy arrays for Numpy :code:`MeshNumpyLayer`
         """
-        if self.bs_error_seed is not None:
-            np.random.seed(self.bs_error_seed)
+        if self.testing:
+            np.random.seed(TEST_SEED)
         mask = self.mask if self.mask is not None else np.ones((self.num_layers, self.units // 2))
         e_l = np.random.randn(self.num_layers, self.units // 2) * self.bs_error * mask
         if self.use_different_errors:
-            if self.bs_error_seed is not None:
-                np.random.seed(self.bs_error_seed + 1)
+            if self.testing:
+                np.random.seed(TEST_SEED + 1)
             e_r = np.random.randn(self.num_layers, self.units // 2) * self.bs_error * mask
         else:
             e_r = e_l

@@ -369,6 +369,18 @@ def grid_permutation(units: int, num_layers: int):
                       permuted_indices.astype(np.int32)))
 
 
+def grid_viz_permutation(units: int, num_layers: int):
+    ordered_idx = np.arange(units)
+    split_num_layers = (num_layers - num_layers // 2, num_layers // 2)
+    right_shift = np.roll(ordered_idx, 1, axis=0)
+    permuted_indices = np.zeros((num_layers, units))
+    permuted_indices[::2] = np.ones((split_num_layers[0], 1)) @ ordered_idx[np.newaxis, :]
+    permuted_indices[1::2] = np.ones((split_num_layers[1], 1)) @ right_shift[np.newaxis, :]
+    return np.vstack((ordered_idx.astype(np.int32),
+                      permuted_indices[:-1].astype(np.int32),
+                      ordered_idx.astype(np.int32)))
+
+
 def plot_complex_matrix(plt, matrix: np.ndarray):
     plt.figure(figsize=(15, 5), dpi=200)
     plt.subplot(131)

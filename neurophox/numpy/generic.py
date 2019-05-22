@@ -111,7 +111,7 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
         self.tunable_layer = tunable_layer
         self.perm_idx = perm_idx
         self.right_perm_idx = right_perm_idx
-        self.inv_right_perm_idx = inverse_permutation(perm_idx) if self.perm_idx is not None else None
+        self.inv_right_perm_idx = inverse_permutation(right_perm_idx) if self.right_perm_idx is not None else None
         super(MeshVerticalNumpyLayer, self).__init__(self.tunable_layer.shape[0])
 
     def transform(self, inputs: np.ndarray):
@@ -226,12 +226,11 @@ class MeshNumpy:
         e_l, e_r = self.model.mzi_error_matrices
 
         for layer in range(self.num_layers):
-            num_beamsplitters = self.units // 2 - (layer % 2 and not self.units % 2)
             errors_l = e_l[layer]
             errors_r = e_r[layer]
             beamsplitter_layer_l = np.eye(self.units, dtype=NP_COMPLEX)
             beamsplitter_layer_r = np.eye(self.units, dtype=NP_COMPLEX)
-            for idx in range(num_beamsplitters):
+            for idx in range(self.units // 2):
                 wvg_idx = idx * 2
                 beamsplitter_layer_l[wvg_idx:wvg_idx + 2, wvg_idx:wvg_idx + 2] = Beamsplitter(
                     hadamard=self.model.hadamard,
@@ -241,8 +240,10 @@ class MeshNumpy:
                     hadamard=self.model.hadamard,
                     epsilon=errors_r[idx]
                 ).matrix
-            beamsplitter_layers_l.append(MeshVerticalNumpyLayer(beamsplitter_layer_l))
-            beamsplitter_layers_r.append(MeshVerticalNumpyLayer(beamsplitter_layer_r))
+            beamsplitter_layers_l.append(MeshVerticalNumpyLayer(beamsplitter_layer_l,
+                                                                perm_idx=self.model.perm_idx[layer]))
+            beamsplitter_layers_r.append(MeshVerticalNumpyLayer(beamsplitter_layer_r,
+                                                                right_perm_idx=None if layer < self.num_layers - 1 else self.model.perm_idx[-1]))
         return beamsplitter_layers_l, beamsplitter_layers_r
 
 
@@ -255,8 +256,13 @@ class MeshNumpyLayer(TransformerNumpyLayer):
     """
     def __init__(self, mesh_model: MeshModel, phases: Optional[MeshPhases]=None):
         self.mesh = MeshNumpy(mesh_model)
+        self._setup(phases)
+        super(MeshNumpyLayer, self).__init__(self.units)
+
+    def _setup(self, phases, testing: bool=False):
+        self.mesh.model.testing = testing
         if phases is None:
-            self.theta, self.phi, self.gamma = mesh_model.init()
+            self.theta, self.phi, self.gamma = self.mesh.model.init()
         else:
             self.theta, self.phi, self.gamma = phases.theta.param, phases.phi.param, phases.gamma
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
@@ -264,7 +270,6 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         self.external_phase_shift_layers = self.phases.external_phase_shift_layers.T
         self.mesh_layers = self.mesh.mesh_layers(self.phases)
         self.beamsplitter_layers_l, self.beamsplitter_layers_r = self.mesh.beamsplitter_layers()
-        super(MeshNumpyLayer, self).__init__(self.units)
 
     def transform(self, inputs: np.ndarray) -> np.ndarray:
         """
@@ -307,9 +312,10 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         inputs = inputs * np.conj(self.phases.input_phase_shift_layer)
         return inputs
 
-    def propagate(self, inputs: np.ndarray) -> np.ndarray:
+    def propagate(self, inputs: np.ndarray, explicit: bool=False, viz_perm_idx: np.ndarray=None) -> np.ndarray:
         """
-        Propagate :code:`inputs` for each :math:`\ell < L` (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+        Propagate :code:`inputs` for each :math:`\ell < L`
+        (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
 
         .. math::
             V_{\ell} = V_{\mathrm{in}} \prod_{\ell' = 1}^{\ell} U^{(\ell')},
@@ -317,23 +323,51 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         where :math:`U \in \mathrm{U}(N)` and :math:`V_{\ell}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            inputs: :code:`inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+            inputs: :code:`inputs` batch represented by matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+            explicit: explicitly show field propagation through the MZIs (useful for photonic simulations)
+            viz_perm_idx: permutation of fields to visualize the propagation (:code:`None` means do not permute fields),
+            this is useful for grid meshes, e.g. rectangular and triangular meshes.
 
         Returns:
             Propagation of :code:`inputs` over all :math:`L` layers to form an array
-            :math:`V_{\mathrm{prop}} \in \mathbb{C}^{L \\times M \\times N}`, which is a concatenation of the :math:`V_{\ell}`.
+            :math:`V_{\mathrm{prop}} \in \mathbb{C}^{L \\times M \\times N}`,
+            which is a concatenation of the :math:`V_{\ell}`.
         """
         outputs = inputs * self.phases.input_phase_shift_layer
-        fields = np.zeros((self.num_layers + 1, *outputs.shape), dtype=NP_COMPLEX)
-        fields[0] = outputs
-        for layer in range(self.num_layers):
-            outputs = self.mesh_layers[layer].transform(outputs)
-            fields[layer + 1] = outputs
+        if explicit:
+            fields = np.zeros((4 * self.num_layers + 1, *outputs.shape), dtype=NP_COMPLEX)
+            fields[0] = outputs
+            for layer in range(self.num_layers):
+                # first coupling event
+                outputs = self.beamsplitter_layers_l[layer].transform(outputs)
+                fields[4 * layer + 1] = outputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else outputs
+                # phase shift event
+                outputs = outputs * self.internal_phase_shift_layers[layer]
+                fields[4 * layer + 2] = outputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else outputs
+                # second coupling event
+                outputs = self.beamsplitter_layers_r[layer].transform(outputs)
+                fields[4 * layer + 3] = outputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else outputs
+                # phase shift event
+                # outputs = outputs * self.external_phase_shift_layers[layer]
+                if layer == self.num_layers - 1:
+                    outputs = outputs * self.external_phase_shift_layers[layer].take(
+                        self.beamsplitter_layers_r[layer].right_perm_idx)
+                else:
+                    outputs = outputs * self.external_phase_shift_layers[layer]
+                fields[4 * layer + 4] = outputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else outputs
+        else:
+            fields = np.zeros((self.num_layers + 1, *outputs.shape), dtype=NP_COMPLEX)
+            fields[0] = outputs
+            for layer in range(self.num_layers):
+                outputs = self.mesh_layers[layer].transform(outputs)
+                fields[layer + 1] = outputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else outputs
         return fields
 
-    def inverse_propagate(self, outputs: np.ndarray) -> np.ndarray:
+    def inverse_propagate(self, outputs: np.ndarray, explicit: bool=False,
+                          viz_perm_idx: Optional[np.ndarray]=None) -> np.ndarray:
         """
-        Inverse propagate :code:`outputs` for each :math:`\ell < L` (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+        Inverse propagate :code:`outputs` for each :math:`\ell < L` (where :math:`U_\ell`
+        represents the matrix for layer :math:`\ell`):
 
         .. math::
             V_{\ell} = V_{\mathrm{out}} \prod_{\ell' = L}^{\ell} (U^{(\ell')})^\dagger,
@@ -341,18 +375,44 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         where :math:`U \in \mathrm{U}(N)` and :math:`V_{\ell}, V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
 
         Args:
-            outputs: :code:`outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+            outputs: :code:`outputs` batch represented by matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+            explicit: explicitly show field propagation through the MZIs (useful for photonic simulations)
+            viz_perm_idx: permutation of fields to visualize the propagation (:code:`None` means do not permute fields),
+            this is useful for grid meshes, e.g. rectangular and triangular meshes.
 
         Returns:
             Propagation of :code:`outputs` over all :math:`L` layers to form an array
-            :math:`V_{\mathrm{prop}} \in \mathbb{C}^{L \\times M \\times N}`, which is a concatenation of the :math:`V_{\ell}`.
+            :math:`V_{\mathrm{prop}} \in \mathbb{C}^{L \\times M \\times N}`,
+            which is a concatenation of the :math:`V_{\ell}`.
         """
         inputs = outputs
-        fields = np.zeros((self.num_layers + 1, *inputs.shape), dtype=NP_COMPLEX)
-        for layer in reversed(range(self.num_layers)):
-            fields[layer + 1] = inputs
-            inputs = self.mesh_layers[layer].inverse_transform(inputs)
-        fields[0] = inputs
+        if explicit:
+            fields = np.zeros((self.num_layers * 4 + 1, *inputs.shape), dtype=NP_COMPLEX)
+            for layer in reversed(range(self.num_layers)):
+                # measure phi fields
+                fields[4 * layer + 4] = inputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else inputs
+                # inputs = inputs * np.conj(self.external_phase_shift_layers[layer])
+                if layer == self.num_layers - 1:
+                    inputs = inputs * self.external_phase_shift_layers[layer].take(
+                        self.beamsplitter_layers_r[layer].right_perm_idx).conj()
+                else:
+                    inputs = inputs * self.external_phase_shift_layers[layer].conj()
+                # first coupling event
+                fields[4 * layer + 3] = inputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else inputs
+                inputs = self.beamsplitter_layers_r[layer].inverse_transform(inputs)
+                # measure theta fields, phase shift event
+                fields[4 * layer + 2] = inputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else inputs
+                inputs = inputs * np.conj(self.internal_phase_shift_layers[layer])
+                # second coupling event
+                fields[4 * layer + 1] = inputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else inputs
+                inputs = self.beamsplitter_layers_l[layer].inverse_transform(inputs)
+            fields[0] = inputs
+        else:
+            fields = np.zeros((self.num_layers + 1, *inputs.shape), dtype=NP_COMPLEX)
+            for layer in reversed(range(self.num_layers)):
+                fields[layer + 1] = inputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else inputs
+                inputs = self.mesh_layers[layer].inverse_transform(inputs)
+            fields[0] = inputs
         return fields
 
     @property
