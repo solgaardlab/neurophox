@@ -17,7 +17,13 @@ The [Neurophox module](https://solgaard-lab-neurophox.readthedocs-hosted.com/en/
 
 ## Motivation
 
-Orthogonal and unitary neural networks have interesting properties and have been studied for synthetic natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). Furthermore, new energy-efficient photonic technologies are being built to realize unitary mesh-based neural networks using light as the computing medium as opposed to conventional analog electronics.
+Integrated optical neural networks or photonic neural networks are an ASIC technology that uses light as a computing medium as opposed to conventional analog electronics. Such devices are a new and exciting option for low-energy and practical machine learning accelerator technologies that can be deployed in data centers where optical fibers and photonic technologies are already used to transmit and process data.
+
+Optical neural networks are composed of "optical matrix multipliers" (defined by two-port components arranged in a mesh architecture as discussed in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf)) and optical nonlinearities such as [electro-optic activations](https://arxiv.org/pdf/1903.04579.pdf). 
+
+The interesting property of the linear optical devices are that they behave differently from conventional matrix multipliers. They instead act as unitary operators (which we refer to as a unitary photonic device or unitary mesh). This puts optical mesh networks in an interesting regime of machine learning.
+
+Orthogonal and unitary neural networks might circumvent vanishing and exploding gradient problems and have been studied for synthetic long-term memory natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). 
 
 ## Introduction
 
