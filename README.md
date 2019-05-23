@@ -1,9 +1,8 @@
-<center><img src="https://user-images.githubusercontent.com/7623867/57964848-ae1b0000-78f0-11e9-8cc8-a9ba628c3a89.png" width="50%" alt="Logo"></center>
+<div style="text-align:center"><img src="https://user-images.githubusercontent.com/7623867/57964848-ae1b0000-78f0-11e9-8cc8-a9ba628c3a89.png" width="50%" alt="Logo"></div>
 
 # 
 ![Build Status](https://img.shields.io/travis/solgaardlab/neurophox/master.svg?style=for-the-badge)
 ![Docs](https://readthedocs.com/projects/solgaard-lab-neurophox/badge/?version=latest&style=for-the-badge)
-![Python Version](https://img.shields.io/pypi/pyversions/neurophox.svg?style=for-the-badge)
 ![PiPy](https://img.shields.io/pypi/v/neurophox.svg?style=for-the-badge)
 ![CodeCov](https://img.shields.io/codecov/c/github/solgaardlab/neurophox/master.svg?style=for-the-badge)
 
