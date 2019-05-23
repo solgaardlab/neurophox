@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from setuptools import setup
+from setuptools import setup, find_packages
 
 project_name = "neurophox"
 
@@ -12,8 +12,8 @@ requirements = [
 
 setup(
     name=project_name,
-    version="0.1.0-alpha",
-    packages=[project_name],
+    version="0.1.0-alpha.1",
+    packages=find_packages(),
     description='A simulation framework for unitary neural networks and photonic devices',
     author='Sunil Pai',
     author_email='sunilpai@stanford.edu',

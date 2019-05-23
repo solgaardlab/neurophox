@@ -19,11 +19,13 @@ The [Neurophox module](https://solgaard-lab-neurophox.readthedocs-hosted.com/en/
 
 Integrated optical neural networks or photonic neural networks are an ASIC technology that uses light as a computing medium as opposed to conventional analog electronics. Such devices are a new and exciting option for low-energy and practical machine learning accelerator technologies that can be deployed in data centers where optical fibers and photonic technologies are already used to transmit and process data.
 
-Optical neural networks are composed of "optical matrix multipliers" (defined by two-port components arranged in a mesh architecture as discussed in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf)) and optical nonlinearities such as [electro-optic activations](https://arxiv.org/pdf/1903.04579.pdf). 
+Optical neural networks are composed of "optical matrix multipliers" (defined by two-port components arranged in a "unitary mesh" architecture as discussed in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf)) and optical nonlinearities such as [electro-optic activations](https://arxiv.org/pdf/1903.04579.pdf). 
 
-The interesting property of the linear optical devices are that they behave differently from conventional matrix multipliers. They instead act as unitary operators (which we refer to as a unitary photonic device or unitary mesh). This puts optical mesh networks in an interesting regime of machine learning.
-
-Orthogonal and unitary neural networks might circumvent vanishing and exploding gradient problems and have been studied for synthetic long-term memory natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). 
+The interesting property of the unitary mesh matrix multiplier are that they behave differently from conventional matrix multipliers:
+1. They act as unitary operators rather than general linear operators, preserving the norm of the data flowing through the unitary mesh network.
+2. The matrix elements are not directly trained during backpropagation. Instead, "phase shifts" or Euler angle parameters are trained.
+ 
+This puts optical mesh networks in an interesting and relatively unexplored regime of machine learning. For example, orthogonal and unitary neural networks might circumvent vanishing and exploding gradient problems due to norm-preserving property. Such networks have been studied for synthetic long-term memory natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). 
 
 ## Introduction
 
