@@ -4,7 +4,8 @@ python:
   version: 3.6
   install:
     - requirements: doc/requirements.txt
-    - requirements: requirements.txt
+    - method: setuptools
+      path: .
 
 sphinx:
   builder: html
