@@ -18,6 +18,7 @@ setup(
     author='Sunil Pai',
     author_email='sunilpai@stanford.edu',
     license='MIT',
+    url="https://github.com/solgaardlab/neurophox",
     classifiers=(
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
