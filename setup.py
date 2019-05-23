@@ -7,7 +7,7 @@ requirements = [
     "numpy",
     "scipy",
     "torch>=1.1",
-    "tensorflow>=2.0"
+    "tensorflow>=2.0.0a"
 ]
 
 setup(

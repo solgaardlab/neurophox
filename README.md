@@ -1,7 +1,10 @@
 <center><img src="https://user-images.githubusercontent.com/7623867/57964848-ae1b0000-78f0-11e9-8cc8-a9ba628c3a89.png" width="50%" alt="Logo"></center>
 
 # 
-
+![Build Status](https://img.shields.io/travis/solgaardlab/neurophox/master.svg?style=for-the-badge)
+![Python Version](https://img.shields.io/pypi/pyversions/neurophox.svg?style=for-the-badge)
+![PiPy](https://img.shields.io/pypi/v/neurophox.svg?style=for-the-badge)
+![CodeCov](https://img.shields.io/codecov/c/github/solgaardlab/neurophox/master.svg?style=for-the-badge)
 
 The Neurophox module is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf) and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
 
@@ -11,10 +14,6 @@ The Neurophox module is an open source machine learning and photonic simulation 
 ![neurophox](https://user-images.githubusercontent.com/7623867/57976056-57fb9a80-798c-11e9-9aef-8d1f07af7ca7.gif)
 
 
-![Build Status](https://img.shields.io/travis/solgaardlab/neurophox/master.svg?style=for-the-badge)
-![Python Version](https://img.shields.io/pypi/pyversions/neurophox.svg?style=for-the-badge)
-![PiPy](https://img.shields.io/pypi/v/neurophox.svg?style=for-the-badge)
-![CodeCov](https://img.shields.io/codecov/c/github/solgaardlab/neurophox/master.svg?style=for-the-badge)
 ## Motivation
 
 Orthogonal and unitary neural networks have interesting properties and have been studied for synthetic natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). Furthermore, new energy-efficient photonic technologies are being built to realize unitary mesh-based neural networks using light as the computing medium as opposed to conventional analog electronics.
@@ -37,7 +36,7 @@ The dependencies for Neurophox (specified in `requirements.txt`) are:
 numpy
 scipy
 matplotlib
-tensorflow>=2.0
+tensorflow>=2.0.0a
 torch>=1.1
 ```
 

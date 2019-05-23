@@ -11,7 +11,8 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 # import os
-# import sys
+import sys
+import mock
 # sys.path.insert(0, os.path.abspath('.'))
 
 
@@ -23,6 +24,7 @@ author = 'Sunil Pai'
 
 
 # -- General configuration ---------------------------------------------------
+master_doc = 'index'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
