@@ -11,7 +11,10 @@ The Neurophox module is an open source machine learning and photonic simulation 
 ![neurophox](https://user-images.githubusercontent.com/7623867/57976056-57fb9a80-798c-11e9-9aef-8d1f07af7ca7.gif)
 
 
-[![Build Status](https://travis-ci.com/solgaardlab/neurophox.svg?branch=master)](https://travis-ci.com/solgaardlab/neurophox)
+![Build Status](https://img.shields.io/travis/solgaardlab/neurophox/master.svg?style=for-the-badge)
+![Python Version](https://img.shields.io/pypi/pyversions/neurophox.svg?style=for-the-badge)
+![PiPy](https://img.shields.io/pypi/v/neurophox.svg?style=for-the-badge)
+![CodeCov](https://img.shields.io/codecov/c/github/solgaardlab/neurophox/master.svg?style=for-the-badge)
 ## Motivation
 
 Orthogonal and unitary neural networks have interesting properties and have been studied for synthetic natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). Furthermore, new energy-efficient photonic technologies are being built to realize unitary mesh-based neural networks using light as the computing medium as opposed to conventional analog electronics.
@@ -26,16 +29,16 @@ Scattering matrix models used in unitary mesh networks for photonics simulations
 
 Some important requirements for Neurophox are:
 1. Python >=3.6
-2. Tensorflow 2.0
-3. PyTorch 1.1
+2. Tensorflow >=2.0.0a
+3. PyTorch
 
 The dependencies for Neurophox (specified in `requirements.txt`) are:
 ```text
 numpy
 scipy
 matplotlib
-tensorflow==2.0
-torch==1.1
+tensorflow>=2.0
+torch>=1.1
 ```
 
 ## Getting started
