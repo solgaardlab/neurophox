@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 import numpy as np
-from ..helpers import plot_complex_matrix, inverse_permutation
+from ..helpers import plot_complex_matrix, inverse_permutation, ordered_viz_permutation
 from ..components import MZI, Beamsplitter
 from ..control import MeshPhases
 from ..config import NP_COMPLEX
@@ -333,6 +333,7 @@ class MeshNumpyLayer(TransformerNumpyLayer):
             :math:`V_{\mathrm{prop}} \in \mathbb{C}^{L \\times M \\times N}`,
             which is a concatenation of the :math:`V_{\ell}`.
         """
+        viz_perm_idx = viz_perm_idx if viz_perm_idx is not None else ordered_viz_permutation(self.units, self.num_layers)
         outputs = inputs * self.phases.input_phase_shift_layer
         if explicit:
             fields = np.zeros((4 * self.num_layers + 1, *outputs.shape), dtype=NP_COMPLEX)
@@ -340,13 +341,13 @@ class MeshNumpyLayer(TransformerNumpyLayer):
             for layer in range(self.num_layers):
                 # first coupling event
                 outputs = self.beamsplitter_layers_l[layer].transform(outputs)
-                fields[4 * layer + 1] = outputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else outputs
+                fields[4 * layer + 1] = outputs.take(viz_perm_idx[layer + 1], axis=-1)
                 # phase shift event
                 outputs = outputs * self.internal_phase_shift_layers[layer]
-                fields[4 * layer + 2] = outputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else outputs
+                fields[4 * layer + 2] = outputs.take(viz_perm_idx[layer + 1], axis=-1)
                 # second coupling event
                 outputs = self.beamsplitter_layers_r[layer].transform(outputs)
-                fields[4 * layer + 3] = outputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else outputs
+                fields[4 * layer + 3] = outputs.take(viz_perm_idx[layer + 1], axis=-1)
                 # phase shift event
                 # outputs = outputs * self.external_phase_shift_layers[layer]
                 if layer == self.num_layers - 1:
@@ -354,13 +355,13 @@ class MeshNumpyLayer(TransformerNumpyLayer):
                         self.beamsplitter_layers_r[layer].right_perm_idx)
                 else:
                     outputs = outputs * self.external_phase_shift_layers[layer]
-                fields[4 * layer + 4] = outputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else outputs
+                fields[4 * layer + 4] = outputs.take(viz_perm_idx[layer + 1], axis=-1)
         else:
             fields = np.zeros((self.num_layers + 1, *outputs.shape), dtype=NP_COMPLEX)
             fields[0] = outputs
             for layer in range(self.num_layers):
                 outputs = self.mesh_layers[layer].transform(outputs)
-                fields[layer + 1] = outputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else outputs
+                fields[layer + 1] = outputs.take(viz_perm_idx[layer + 1], axis=-1)
         return fields
 
     def inverse_propagate(self, outputs: np.ndarray, explicit: bool=False,

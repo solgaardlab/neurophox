@@ -30,10 +30,7 @@ class MeshModel:
         self.units = perm_idx.shape[1]
         self.num_layers = perm_idx.shape[0] - 1
         self.perm_idx = perm_idx
-        self.inv_perm_idx = np.zeros_like(self.perm_idx)
-        for idx, perm_idx in enumerate(self.perm_idx):
-            self.inv_perm_idx[perm_idx] = idx
-        self.num_mzis = num_mzis
+        self.num_mzis = num_mzis if num_mzis is not None else self.units // 2 * np.ones((self.num_layers,))
         self.hadamard = hadamard
         self.bs_error = bs_error
         self.testing = testing
@@ -198,8 +195,7 @@ class ButterflyMeshModel(MeshModel):
         bs_error: Beamsplitter layer
     """
     def __init__(self, num_layers: int, hadamard: bool = False, bs_error: float = 0.0):
-        super(ButterflyMeshModel, self).__init__(np.vstack(
-            [butterfly_permutation(2 ** num_layers, 2 ** layer) for layer in range(num_layers)]).astype(np.int32),
+        super(ButterflyMeshModel, self).__init__(butterfly_permutation(num_layers),
                                                  hadamard=hadamard,
                                                  bs_error=bs_error
                                                  )

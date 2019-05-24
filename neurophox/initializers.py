@@ -151,7 +151,7 @@ class ConstantPhaseInitializer(MeshPhaseInitializer):
         super(ConstantPhaseInitializer, self).__init__(units, num_layers)
 
     def to_np(self) -> np.ndarray:
-        return self.constant_phase * np.ones((self.units, self.num_layers))
+        return self.constant_phase * np.ones((self.num_layers, self.units // 2))
 
 
 def get_haar_theta(units: int, num_layers: int, hadamard: bool,

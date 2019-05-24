@@ -5,7 +5,7 @@ import numpy as np
 
 from .generic import TransformerLayer, MeshLayer, CompoundTransformerLayer, PermutationLayer
 from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel
-from ..helpers import rectangular_permutation, butterfly_permutation
+from ..helpers import rectangular_permutation, butterfly_layer_permutation
 from ..config import DEFAULT_BASIS, TF_FLOAT, TF_COMPLEX
 
 
@@ -240,4 +240,4 @@ class ButterflyPerm(PermutationLayer):
 
     def __init__(self, units: int, frequency: int):
         self.frequency = frequency
-        super(ButterflyPerm, self).__init__(permuted_indices=butterfly_permutation(units, frequency))
+        super(ButterflyPerm, self).__init__(permuted_indices=butterfly_layer_permutation(units, frequency))

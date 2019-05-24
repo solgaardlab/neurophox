@@ -304,7 +304,7 @@ def prm_permutation(units: int, tunable_block_sizes: np.ndarray,
     for idx, frequency in enumerate(sampling_frequencies):
         perm_prev = grid_perms[idx][-1]
         perm_next = grid_perms[idx + 1][0]
-        perm = butterfly_permutation(units, frequency) if butterfly else rectangular_permutation(units, frequency)
+        perm = butterfly_layer_permutation(units, frequency) if butterfly else rectangular_permutation(units, frequency)
         glued_perm = glue_permutations(perm_prev, perm)
         glued_perm = glue_permutations(glued_perm, perm_next)
         perms_to_concatenate += [grid_perms[idx][1:-1], glued_perm]
@@ -312,7 +312,7 @@ def prm_permutation(units: int, tunable_block_sizes: np.ndarray,
     return np.vstack(perms_to_concatenate)
 
 
-def butterfly_permutation(units: int, frequency: int):
+def butterfly_layer_permutation(units: int, frequency: int):
     if units % 2:
         raise NotImplementedError('Odd input dimension case not yet implemented.')
     frequency = frequency
@@ -369,6 +369,12 @@ def grid_viz_permutation(units: int, num_layers: int):
                       ordered_idx.astype(np.int32)))
 
 
+def ordered_viz_permutation(units: int, num_layers: int):
+    ordered_idx = np.arange(units)
+    permuted_indices = np.ones((num_layers + 1, 1)) @ ordered_idx[np.newaxis, :]
+    return permuted_indices.astype(np.int32)
+
+
 def plot_complex_matrix(plt, matrix: np.ndarray):
     plt.figure(figsize=(15, 5), dpi=200)
     plt.subplot(131)
@@ -422,3 +428,20 @@ def pairwise_off_diag_permutation(units: int):
         perm_idx[::2] = ordered_idx[1::2]
         perm_idx[1::2] = ordered_idx[::2]
     return perm_idx.astype(np.int32)
+
+
+def butterfly_permutation(num_layers: int):
+    ordered_idx = np.arange(2 ** num_layers)
+    permuted_idx = np.vstack(
+        [butterfly_layer_permutation(2 ** num_layers, 2 ** layer) for layer in range(num_layers)]
+    ).astype(np.int32)
+    return np.vstack((ordered_idx.astype(np.int32),
+                      permuted_idx[1:].astype(np.int32),
+                      ordered_idx.astype(np.int32)))
+
+
+def neurophox_matplotlib_setup(plt):
+    plt.rc('text', usetex=True)
+    plt.rc('font', **{'family': 'serif', 'serif': ['Charter']})
+    plt.rcParams['mathtext.fontset'] = 'dejavuserif'
+    plt.rcParams.update({'text.latex.preamble': [r'\usepackage{siunitx}', r'\usepackage{amsmath}']})
