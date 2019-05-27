@@ -13,7 +13,7 @@ class MeshModel:
     Args:
         perm_idx: A numpy array of :math:`N \\times L` permutation indices for all layers of the mesh
         hadamard: Whether to use Hadamard convention
-        num_mzis: A numpy array of :math:`L` integers, where for layer :math:`\ell`, :math:`M_\ell \leq \\lfloor N / 2\\rfloor`, used to defined the phase shift mask.
+        num_tunable: A numpy array of :math:`L` integers, where for layer :math:`\ell`, :math:`M_\ell \leq \\lfloor N / 2\\rfloor`, used to defined the phase shift mask.
         bs_error: Beamsplitter error (ignore for pure machine learning applications)
         testing: Use a seed for randomizing error (ignore for pure machine learning applications)
         use_different_errors: Use different errors for the left and right beamsplitter errors
@@ -22,7 +22,7 @@ class MeshModel:
         gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
     """
-    def __init__(self, perm_idx: np.ndarray, hadamard: bool = False, num_mzis: Optional[np.ndarray] = None,
+    def __init__(self, perm_idx: np.ndarray, hadamard: bool = False, num_tunable: Optional[np.ndarray] = None,
                  bs_error: float = 0.0, testing: bool = False, use_different_errors: bool = False,
                  theta_init_name: str = "random_theta", phi_init_name: str = "random_phi",
                  gamma_init_name: str = "random_gamma", basis: str = BLOCH):
@@ -30,7 +30,7 @@ class MeshModel:
         self.units = perm_idx.shape[1]
         self.num_layers = perm_idx.shape[0] - 1
         self.perm_idx = perm_idx
-        self.num_mzis = num_mzis if num_mzis is not None else self.units // 2 * np.ones((self.num_layers,))
+        self.num_tunable = num_tunable if num_tunable is not None else self.units // 2 * np.ones((self.num_layers,))
         self.hadamard = hadamard
         self.bs_error = bs_error
         self.testing = testing
@@ -41,8 +41,8 @@ class MeshModel:
         self.gamma_init_name = gamma_init_name
         self.basis = basis
         for layer in range(self.num_layers):
-            self.mask[layer][:int(self.num_mzis[layer])] = 1
-        if self.num_mzis.shape[0] != self.num_layers:
+            self.mask[layer][:int(self.num_tunable[layer])] = 1
+        if self.num_tunable.shape[0] != self.num_layers:
             raise ValueError("num_mzis, perm_idx num_layers mismatch.")
         if self.units < 2:
             raise ValueError("units must be at least 2.")
@@ -144,7 +144,7 @@ class RectangularMeshModel(MeshModel):
         super(RectangularMeshModel, self).__init__(perm_idx,
                                                    hadamard=hadamard,
                                                    bs_error=bs_error,
-                                                   num_mzis=num_mzis,
+                                                   num_tunable=num_mzis,
                                                    theta_init_name=theta_init_name,
                                                    phi_init_name=phi_init_name,
                                                    gamma_init_name=gamma_init_name,
@@ -174,7 +174,7 @@ class TriangularMeshModel(MeshModel):
         super(TriangularMeshModel, self).__init__(perm_idx,
                                                   hadamard=hadamard,
                                                   bs_error=bs_error,
-                                                  num_mzis=num_mzis,
+                                                  num_tunable=num_mzis,
                                                   theta_init_name=theta_init_name,
                                                   phi_init_name=phi_init_name,
                                                   gamma_init_name=gamma_init_name,
@@ -241,7 +241,7 @@ class PermutingRectangularMeshModel(MeshModel):
             perm_idx=prm_permutation(units=units, tunable_block_sizes=self.block_sizes,
                                      sampling_frequencies=self.sampling_frequencies,
                                      butterfly=False),
-            num_mzis=num_mzis,
+            num_tunable=num_mzis,
             hadamard=hadamard,
             bs_error=bs_error,
             theta_init_name=theta_init_name,

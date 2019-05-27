@@ -196,10 +196,10 @@ class MeshVerticalLayer(TransformerLayer):
             (usually for the final layer and after the coupling operation)
     """
     def __init__(self, pairwise_perm_idx: np.ndarray, diag: tf.Tensor, off_diag: tf.Tensor,
-                 perm: PermutationLayer = None, right_perm: PermutationLayer = None):
+                 right_perm: PermutationLayer = None, left_perm: PermutationLayer = None):
         self.diag = diag
         self.off_diag = off_diag
-        self.perm = perm
+        self.left_perm = left_perm
         self.right_perm = right_perm
         self.pairwise_perm_idx = pairwise_perm_idx
         super(MeshVerticalLayer, self).__init__(pairwise_perm_idx.shape[0])
@@ -219,7 +219,7 @@ class MeshVerticalLayer(TransformerLayer):
             Propaged :code:`inputs` through single layer :math:`\ell` to form an array
             :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
         """
-        outputs = inputs if self.perm is None else self.perm.transform(inputs)
+        outputs = inputs if self.left_perm is None else self.left_perm.transform(inputs)
         outputs = outputs * self.diag + tf.gather(outputs * self.off_diag, self.pairwise_perm_idx, axis=-1)
         return outputs if self.right_perm is None else self.right_perm.transform(outputs)
 
@@ -242,7 +242,7 @@ class MeshVerticalLayer(TransformerLayer):
         diag = tf.math.conj(self.diag)
         off_diag = tf.gather(tf.math.conj(self.off_diag), self.pairwise_perm_idx, axis=-1)
         inputs = inputs * diag + tf.gather(inputs * off_diag, self.pairwise_perm_idx, axis=-1)
-        return inputs if self.perm is None else self.perm.inverse_transform(inputs)
+        return inputs if self.left_perm is None else self.left_perm.inverse_transform(inputs)
 
 
 class Mesh:
@@ -291,12 +291,11 @@ class Mesh:
 
         diag_layers, off_diag_layers = tf.transpose(diag_layers), tf.transpose(off_diag_layers)
 
-        mesh_layers = []
-        for layer in range(self.num_layers - 1):
+        mesh_layers = [MeshVerticalLayer(self.pairwise_perm_idx, diag_layers[0], off_diag_layers[0],
+                                         self.perm_layers[1], self.perm_layers[0])]
+        for layer in range(1, self.num_layers):
             mesh_layers.append(MeshVerticalLayer(self.pairwise_perm_idx, diag_layers[layer], off_diag_layers[layer],
-                                                 self.perm_layers[layer]))
-        mesh_layers.append(MeshVerticalLayer(self.pairwise_perm_idx, diag_layers[-1], off_diag_layers[-1],
-                                             self.perm_layers[-2], self.perm_layers[-1]))
+                                                 self.perm_layers[layer + 1]))
         return mesh_layers
 
 

@@ -102,16 +102,15 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
     """
     Args:
         tunable_layer: tunable layer
-        perm_idx: the permutation for the mesh vertical layer (prior to the coupling operation)
+        left_perm_idx: the permutation for the mesh vertical layer (prior to the coupling operation)
         right_perm_idx: the right permutation for the mesh vertical layer
             (usually for the final layer and after the coupling operation)
     """
-    def __init__(self, tunable_layer: np.ndarray, perm_idx: Optional[np.ndarray] = None,
-                 right_perm_idx: Optional[np.ndarray]=None):
+    def __init__(self, tunable_layer: np.ndarray,
+                 right_perm_idx: Optional[np.ndarray]=None, left_perm_idx: Optional[np.ndarray] = None):
         self.tunable_layer = tunable_layer
-        self.perm_idx = perm_idx
+        self.left_perm_idx = left_perm_idx
         self.right_perm_idx = right_perm_idx
-        self.inv_right_perm_idx = inverse_permutation(right_perm_idx) if self.right_perm_idx is not None else None
         super(MeshVerticalNumpyLayer, self).__init__(self.tunable_layer.shape[0])
 
     def transform(self, inputs: np.ndarray):
@@ -131,10 +130,10 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
             Propagation of :code:`inputs` through single layer :math:`\ell` to form an array
             :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
         """
-        if self.perm_idx is None:
+        if self.left_perm_idx is None:
             outputs = inputs @ self.tunable_layer
         else:
-            outputs = inputs.take(self.perm_idx, axis=-1) @ self.tunable_layer
+            outputs = inputs.take(self.left_perm_idx, axis=-1) @ self.tunable_layer
         if self.right_perm_idx is None:
             return outputs
         else:
@@ -161,10 +160,10 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
             inputs = outputs @ self.tunable_layer.conj().T
         else:
             inputs = outputs.take(inverse_permutation(self.right_perm_idx), axis=-1) @ self.tunable_layer.conj().T
-        if self.perm_idx is None:
+        if self.left_perm_idx is None:
             return inputs
         else:
-            return inputs.take(inverse_permutation(self.perm_idx), axis=-1)
+            return inputs.take(inverse_permutation(self.left_perm_idx), axis=-1)
 
 
 class MeshNumpy:
@@ -210,8 +209,8 @@ class MeshNumpy:
                 ).matrix
             mesh_layers.append(MeshVerticalNumpyLayer(
                 tunable_layer=tunable_layer,
-                perm_idx=self.model.perm_idx[layer],
-                right_perm_idx=None if layer < self.num_layers - 1 else self.model.perm_idx[-1])
+                left_perm_idx=None if layer > 0 else self.model.perm_idx[0],
+                right_perm_idx=self.model.perm_idx[layer + 1])
             )
         return mesh_layers
 
@@ -241,7 +240,7 @@ class MeshNumpy:
                     epsilon=errors_r[idx]
                 ).matrix
             beamsplitter_layers_l.append(MeshVerticalNumpyLayer(beamsplitter_layer_l,
-                                                                perm_idx=self.model.perm_idx[layer]))
+                                                                left_perm_idx=self.model.perm_idx[layer]))
             beamsplitter_layers_r.append(MeshVerticalNumpyLayer(beamsplitter_layer_r,
                                                                 right_perm_idx=None if layer < self.num_layers - 1 else self.model.perm_idx[-1]))
         return beamsplitter_layers_l, beamsplitter_layers_r
@@ -264,6 +263,8 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         if phases is None:
             self.theta, self.phi, self.gamma = self.mesh.model.init()
         else:
+            if self.mesh.num_layers != phases.theta.param.shape[0]:
+                raise ValueError("num_layers must be specified to match input phases.")
             self.theta, self.phi, self.gamma = phases.theta.param, phases.phi.param, phases.gamma
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
         self.internal_phase_shift_layers = self.phases.internal_phase_shift_layers.T
