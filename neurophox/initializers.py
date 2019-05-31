@@ -9,7 +9,7 @@ import numpy as np
 from .config import TF_FLOAT, NP_FLOAT, TEST_SEED
 from .helpers import get_alpha_checkerboard_general, get_default_coarse_grain_block_sizes,\
     get_efficient_coarse_grain_block_sizes
-from scipy.stats import rv_discrete
+from scipy.special import betaincinv
 
 
 class MeshPhaseInitializer:
@@ -175,25 +175,14 @@ def get_haar_theta(units: int, num_layers: int, hadamard: bool,
 
 
 def get_ortho_haar_theta(units: int, num_layers: int,
-                         hadamard: bool, num_samples: int=10000) -> Union[Tuple[np.ndarray, np.ndarray],
-                                                                          Tuple[tf.Variable, tf.Variable],
-                                                                          tf.Variable]:
+                         hadamard: bool) -> Union[Tuple[np.ndarray, np.ndarray],
+                                                  Tuple[tf.Variable, tf.Variable],
+                                                  tf.Variable]:
     alpha_checkerboard = get_alpha_checkerboard_general(units, num_layers)
     theta_0_root = alpha_checkerboard.T[::2, ::2] - 1
     theta_1_root = alpha_checkerboard.T[1::2, 1::2] - 1
-    theta_0_init = np.zeros_like(theta_0_root)
-    theta_1_init = np.zeros_like(theta_1_root)
-    for i in range(units):
-        t = np.linspace(0, np.pi, num_samples)
-        len_0 = np.sum(theta_0_root == i)
-        len_1 = np.sum(theta_1_root == i)
-        if i > 0:
-            haar_dist = rv_discrete(values=(np.arange(num_samples), np.sin(t) ** i / np.sum(np.sin(t) ** i)))
-            theta_0_init[theta_0_root == i] = 2 * t[haar_dist.rvs(size=len_0)]
-            theta_1_init[theta_1_root == i] = 2 * t[haar_dist.rvs(size=len_1)]
-        else:
-            theta_0_init[theta_0_root == i] = 2 * np.pi * np.random.rand(len_0)
-            theta_1_init[theta_1_root == i] = 2 * np.pi * np.random.rand(len_1)
+    theta_0_init = 2 * np.arcsin(betaincinv(0.5 * theta_0_root, 0.5, np.random.rand(*theta_0_root.shape)))
+    theta_1_init = 2 * np.arcsin(betaincinv(0.5 * theta_1_root, 0.5, np.random.rand(*theta_1_root.shape)))
     if not hadamard:
         theta_0_init = np.pi - theta_0_init
         theta_1_init = np.pi - theta_1_init

@@ -180,8 +180,8 @@ class MeshPhasesTorch:
     def __init__(self, theta: Parameter, phi: Parameter, mask: np.ndarray, gamma: Parameter, units: int,
                  basis: str = SINGLEMODE, hadamard: bool = False):
         self.mask = mask if mask is not None else np.ones_like(theta)
-        self.theta = MeshParamTorch(theta * mask + (1 - mask) * (1 - hadamard) * np.pi, units)
-        self.phi = MeshParamTorch(phi * mask, units=units)
+        self.theta = MeshParamTorch(theta * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
+        self.phi = MeshParamTorch(phi * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
         self.gamma = gamma
         self.basis = basis
         self.input_phase_shift_layer = tf.complex(tf.cos(gamma), tf.sin(gamma))

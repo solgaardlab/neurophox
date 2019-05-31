@@ -61,8 +61,8 @@ class PermutationLayer(TransformerLayer):
     def __init__(self, permuted_indices: np.ndarray):
         super(PermutationLayer, self).__init__(units=len(permuted_indices))
         self.units = len(permuted_indices)
-        self.permuted_indices = tuple(np.asarray(permuted_indices, dtype=np.int32))
-        self.inv_permuted_indices = np.zeros_like(self.permuted_indices)
+        self.permuted_indices = torch.as_tensor(np.asarray(permuted_indices, dtype=np.int32))
+        self.inv_permuted_indices = torch.as_tensor(np.zeros_like(self.permuted_indices))
         for idx, perm_idx in enumerate(self.permuted_indices):
             self.inv_permuted_indices[perm_idx] = idx
 
@@ -129,11 +129,14 @@ class Mesh:
             self.e_r = self.model.get_bs_error_matrix(right=True)
         else:
             self.e_r = self.e_l
-        self.enn, self.enp, self.epn, self.epp = self.model.mzi_error_tensors
+        enn, enp, epn, epp = self.model.mzi_error_tensors
+        self.enn = torch.stack((enn, enn))
+        self.enp = torch.stack((enp, enp))
+        self.epn = torch.stack((epn, epn))
+        self.epp = torch.stack((epp, epp))
 
     def mesh_layers(self, phases: MeshPhases):
         raise NotImplementedError("Pytorch is not yet supported.")
-
         internal_psl = phases.internal_phase_shift_layers
         external_psl = phases.external_phase_shift_layers
 

@@ -224,38 +224,22 @@ def get_haar_diagonal_sequence(diagonal_length, parity_odd: bool=False):
     return nums
 
 
-def get_smn_rank(row, col, units, num_layers):
-    if row < num_layers and col > row:
-        diagonal_length = num_layers - np.abs(row - col)
-    elif row > units - num_layers and col < row - units + num_layers:
-        diagonal_length = num_layers - np.abs(row - col - units + num_layers) - 1 * (units == num_layers)
-    else:
-        diagonal_length = num_layers - 1 * (units == num_layers)
-    return units - diagonal_length
-
-
-def get_alpha_rank(row, col, units, num_layers, diagonal_length_to_sequence):
-    if row < num_layers and col > row:
-        diagonal_length = num_layers - np.abs(row - col)
-    elif row > units - num_layers and col < row - units + num_layers:
-        diagonal_length = num_layers - np.abs(row - col - units + num_layers) - 1 * (units == num_layers)
-    else:
-        diagonal_length = num_layers - 1 * (units == num_layers)
-    if diagonal_length == 1:
-        return 1
-    return diagonal_length_to_sequence[int(diagonal_length) - 1][min(row, col)]
-
-
 def get_alpha_checkerboard(units: int, num_layers: int, include_off_mesh: bool=False, flipud=False):
+    if units < num_layers:
+        raise ValueError("Require units >= num_layers!")
     alpha_checkerboard = np.zeros((units - 1, num_layers))
     diagonal_length_to_sequence = [get_haar_diagonal_sequence(i, bool(num_layers % 2)) for i in range(1, num_layers + 1)]
     for i in range(units - 1):
         for j in range(num_layers):
             if (i + j) % 2 == 0:
-                if units >= num_layers:
-                    alpha_checkerboard[i, j] = get_alpha_rank(i, j, units, num_layers, diagonal_length_to_sequence)
+                if i < num_layers and j > i:
+                    diagonal_length = num_layers - np.abs(i - j)
+                elif i > units - num_layers and j < i - units + num_layers:
+                    diagonal_length = num_layers - np.abs(i - j - units + num_layers) - 1 * (units == num_layers)
                 else:
-                    alpha_checkerboard[i, j] = units  # TODO: need to fix this! raise NotImplementedError or actual error?
+                    diagonal_length = num_layers - 1 * (units == num_layers)
+                alpha_checkerboard[i, j] = 1 if diagonal_length == 1 else \
+                    diagonal_length_to_sequence[int(diagonal_length) - 1][min(i, j)]
             else:
                 if include_off_mesh:
                     alpha_checkerboard[i, j] = 1
@@ -362,8 +346,8 @@ def grid_viz_permutation(units: int, num_layers: int):
     split_num_layers = (num_layers - num_layers // 2, num_layers // 2)
     right_shift = np.roll(ordered_idx, 1, axis=0)
     permuted_indices = np.zeros((num_layers, units))
-    permuted_indices[::2] = np.ones((split_num_layers[0], 1)) @ ordered_idx[np.newaxis, :]
-    permuted_indices[1::2] = np.ones((split_num_layers[1], 1)) @ right_shift[np.newaxis, :]
+    permuted_indices[::2] = np.ones((split_num_layers[0], 1)) @ right_shift[np.newaxis, :]
+    permuted_indices[1::2] = np.ones((split_num_layers[1], 1)) @ ordered_idx[np.newaxis, :]
     return np.vstack((ordered_idx.astype(np.int32),
                       permuted_indices[:-1].astype(np.int32),
                       ordered_idx.astype(np.int32)))

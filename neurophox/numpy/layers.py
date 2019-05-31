@@ -6,7 +6,7 @@ from .generic import MeshNumpyLayer
 from ..control import MeshPhases
 from ..config import DEFAULT_BASIS
 from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel
-from ..helpers import grid_viz_permutation
+from ..helpers import grid_viz_permutation, grid_permutation
 
 
 class RMNumpy(MeshNumpyLayer):
@@ -33,10 +33,12 @@ class RMNumpy(MeshNumpyLayer):
 
     def propagate(self, inputs: np.ndarray, explicit: bool=False, viz_perm_idx: Optional[np.ndarray]=None) -> np.ndarray:
         viz_perm_idx = grid_viz_permutation(self.units, self.num_layers) if viz_perm_idx is None else viz_perm_idx
+        # viz_perm_idx = None
         return super(RMNumpy, self).propagate(inputs, explicit, viz_perm_idx)
 
     def inverse_propagate(self, inputs: np.ndarray, explicit: bool=False, viz_perm_idx: Optional[np.ndarray]=None) -> np.ndarray:
         viz_perm_idx = grid_viz_permutation(self.units, self.num_layers) if viz_perm_idx is None else viz_perm_idx
+        # viz_perm_idx = None
         return super(RMNumpy, self).inverse_propagate(inputs, explicit, viz_perm_idx)
 
 
