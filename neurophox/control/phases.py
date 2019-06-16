@@ -11,9 +11,9 @@ class MeshPhases:
     """Arranges the phases in the mesh appropriately depending on :code:`basis` using the :code:`MeshParam` class.
 
     Args:
-        theta: Array for :code:`theta` to be converted to :math:`\\boldsymbol{\\theta}`
-        phi: Array for :code:`phi` to be converted to :math:`\\boldsymbol{\\phi}`
-        gamma: Array for :code:`gamma` to be converted to :math:`\\boldsymbol{\gamma}`
+        theta: Array to be converted to :math:`\\boldsymbol{\\theta}`
+        phi: Array to be converted to :math:`\\boldsymbol{\\phi}`
+        gamma: Array to be converted to :math:`\\boldsymbol{\gamma}`
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
@@ -101,9 +101,9 @@ class MeshPhasesTensorflow:
     """Organizes the phases in the mesh into appropriate arrangements
 
     Args:
-        theta: Array for :code:`theta` to be converted to :math:`\\boldsymbol{\\theta}`
-        phi: Array for :code:`phi` to be converted to :math:`\\boldsymbol{\\phi}`
-        gamma: Array for :code:`gamma` to be converted to :math:`\\boldsymbol{\gamma}`
+        theta: Array to be converted to :math:`\\boldsymbol{\\theta}`
+        phi: Array to be converted to :math:`\\boldsymbol{\\phi}`
+        gamma: Array to be converted to :math:`\\boldsymbol{\gamma}`
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention

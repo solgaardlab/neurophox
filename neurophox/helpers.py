@@ -75,9 +75,12 @@ def to_rm_checkerboard(nparray: np.ndarray, units: int):
     """
     num_layers = nparray.shape[0]
     checkerboard = np.zeros((units, num_layers), dtype=nparray.dtype)
-    checkerboard[::2, ::2] = nparray[::2].T
+    if units % 2:
+        checkerboard[:-1][::2, ::2] = nparray[::2].T
+    else:
+        checkerboard[::2, ::2] = nparray[::2].T
     checkerboard[1::2, 1::2] = nparray[1::2].T
-    return np.vstack([checkerboard, np.zeros(shape=(1, num_layers))])
+    return checkerboard
 
 
 def to_stripe_array(nparray: np.ndarray, units: int):
@@ -341,13 +344,17 @@ def grid_permutation(units: int, num_layers: int):
                       permuted_indices.astype(np.int32)))
 
 
-def grid_viz_permutation(units: int, num_layers: int):
+def grid_viz_permutation(units: int, num_layers: int, flip: bool=False):
     ordered_idx = np.arange(units)
     split_num_layers = (num_layers - num_layers // 2, num_layers // 2)
     right_shift = np.roll(ordered_idx, 1, axis=0)
     permuted_indices = np.zeros((num_layers, units))
-    permuted_indices[::2] = np.ones((split_num_layers[0], 1)) @ right_shift[np.newaxis, :]
-    permuted_indices[1::2] = np.ones((split_num_layers[1], 1)) @ ordered_idx[np.newaxis, :]
+    if flip:
+        permuted_indices[::2] = np.ones((split_num_layers[0], 1)) @ ordered_idx[np.newaxis, :]
+        permuted_indices[1::2] = np.ones((split_num_layers[1], 1)) @ right_shift[np.newaxis, :]
+    else:
+        permuted_indices[::2] = np.ones((split_num_layers[0], 1)) @ right_shift[np.newaxis, :]
+        permuted_indices[1::2] = np.ones((split_num_layers[1], 1)) @ ordered_idx[np.newaxis, :]
     return np.vstack((ordered_idx.astype(np.int32),
                       permuted_indices[:-1].astype(np.int32),
                       ordered_idx.astype(np.int32)))
@@ -426,6 +433,8 @@ def butterfly_permutation(num_layers: int):
 
 def neurophox_matplotlib_setup(plt):
     plt.rc('text', usetex=True)
-    plt.rc('font', **{'family': 'serif', 'serif': ['Charter']})
-    plt.rcParams['mathtext.fontset'] = 'dejavuserif'
+    plt.rc('font', family='serif')
+    # plt.rc('text', usetex=True)
+    # plt.rc('font', **{'family': 'serif', 'serif': ['Charter']})
+    # plt.rcParams['mathtext.fontset'] = 'dejavuserif'
     plt.rcParams.update({'text.latex.preamble': [r'\usepackage{siunitx}', r'\usepackage{amsmath}']})

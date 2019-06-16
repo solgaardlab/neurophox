@@ -2,12 +2,12 @@
 
 # 
 ![Build Status](https://img.shields.io/travis/solgaardlab/neurophox/master.svg?style=for-the-badge)
-![Docs](https://readthedocs.com/projects/solgaard-lab-neurophox/badge/?version=latest&style=for-the-badge)
+![Docs](https://readthedocs.org/projects/neurophox/badge/?style=for-the-badge)
 ![PiPy](https://img.shields.io/pypi/v/neurophox.svg?style=for-the-badge)
 ![CodeCov](https://img.shields.io/codecov/c/github/solgaardlab/neurophox/master.svg?style=for-the-badge)
 
 
-The [Neurophox module](https://solgaard-lab-neurophox.readthedocs-hosted.com/en/latest/) is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf) and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
+The [Neurophox module](https://neurophox.readthedocs.io) is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf) and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
 
 ![neurophox](https://user-images.githubusercontent.com/7623867/57964658-87a79580-78ed-11e9-8f1e-c4af30c32e65.gif)
 
