@@ -97,7 +97,7 @@ class PRMNumpy(MeshNumpyLayer):
 
 
 class BMNumpy(MeshNumpyLayer):
-    def __init__(self, num_layers: int, phases: Optional[MeshPhases] = None,
+    def __init__(self, num_layers: int, phases: Optional[MeshPhases] = None, basis: str = DEFAULT_BASIS,
                  bs_error: float = 0.0, hadamard: bool = False, theta_init_name: Optional[str] = 'random_theta',
                  phi_init_name: Optional[str] = 'random_phi'):
         """Butterfly mesh unitary layer (currently, only :math:`2^L` units allowed)
@@ -111,5 +111,5 @@ class BMNumpy(MeshNumpyLayer):
             phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         """
         super(BMNumpy, self).__init__(
-            ButterflyMeshModel(num_layers, hadamard, bs_error, theta_init_name, phi_init_name), phases
+            ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init_name, phi_init_name), phases
         )

@@ -1,14 +1,13 @@
 import tensorflow as tf
 import numpy as np
 
-from neurophox.config import TF_COMPLEX
-
-from neurophox.numpy import MeshNumpyLayer, RMNumpy, TMNumpy
+from neurophox.numpy import MeshNumpyLayer, RMNumpy, TMNumpy, BMNumpy
 from neurophox.meshmodel import MeshModel
 from neurophox.control import MeshPhases
 from neurophox.helpers import inverse_permutation
 
 TEST_DIMENSIONS = [7, 8]
+TEST_LAYERS = [3, 4]
 
 
 def run_parallel_nullification(np_layer):
@@ -63,6 +62,12 @@ class ParallelNullificationTest(tf.test.TestCase):
             tm = TMNumpy(units=units, basis='sm')
             reconstructed_tm = run_parallel_nullification(tm)
             self.assertAllClose(tm.matrix, reconstructed_tm.matrix)
+
+    def test_bm(self):
+        for num_layers in TEST_LAYERS:
+            bm = BMNumpy(num_layers=num_layers, basis='sm')
+            reconstructed_bm = run_parallel_nullification(bm)
+            self.assertAllClose(bm.matrix, reconstructed_bm.matrix)
 
 
 if __name__ == '__main__':

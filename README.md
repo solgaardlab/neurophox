@@ -62,7 +62,7 @@ There are currently two options to install Neurophox:
     ```bash
     git clone https://github.com/solgaardlab/neurophox
     pip install -e neurophox
-    pip install -r requirements.txt
+    pip install -r neurophox/requirements.txt
     ```
     
 If installing other dependencies manually, ensure you install [PyTorch](https://pytorch.org/) (since PyTorch mesh layers are currently in development) and [Tensorflow 2.0](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf).

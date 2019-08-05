@@ -197,12 +197,13 @@ class ButterflyMeshModel(MeshModel):
         phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
-    def __init__(self, num_layers: int, hadamard: bool = False, bs_error: float = 0.0,
+    def __init__(self, num_layers: int, hadamard: bool = False, bs_error: float = 0.0, basis: str=BLOCH,
                  theta_init_name: str = "random_theta", phi_init_name: str = "random_phi",
                  gamma_init_name: str = "random_gamma"):
         super(ButterflyMeshModel, self).__init__(butterfly_permutation(num_layers),
                                                  hadamard=hadamard,
                                                  bs_error=bs_error,
+                                                 basis=basis,
                                                  theta_init_name=theta_init_name,
                                                  phi_init_name=phi_init_name,
                                                  gamma_init_name=gamma_init_name
