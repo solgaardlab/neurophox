@@ -418,6 +418,31 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         return fields
 
     @property
+    def nullification_set(self) -> np.ndarray:
+        """
+
+        The nullification set is calculated to program layers in parallel from *final layer
+        towards the first layer* since he architecture assumed for this calculation is currently the *inverse* of
+        our feedforward mesh definition. Therefore, we find vectors that can be shined backwards
+        (using :code:`inverse_propagate`) starting from the outputs to program this device from final layer
+        towards the first layer.
+
+        Returns:
+            The :math:`N \times L` nullification set array for the inverse of this layer specified by `model`
+        """
+        propagated_unitary = self.inverse_propagate(
+            np.eye(self.units),
+            viz_perm_idx=ordered_viz_permutation(self.units, self.num_layers)
+        )
+        nullification_set = np.zeros((self.num_layers, self.units), dtype=NP_COMPLEX)
+        desired_vector = np.zeros((self.units,))
+        desired_vector[::2] = 1
+        desired_vector /= np.linalg.norm(desired_vector)
+        for layer in range(self.num_layers):
+            nullification_set[layer] = propagated_unitary[layer].conj() @ desired_vector
+        return nullification_set
+
+    @property
     def phases(self):
         """
 

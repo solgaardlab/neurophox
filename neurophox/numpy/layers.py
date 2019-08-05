@@ -5,7 +5,7 @@ from typing import Optional, List
 from .generic import MeshNumpyLayer
 from ..control import MeshPhases
 from ..config import DEFAULT_BASIS
-from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel
+from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel, ButterflyMeshModel
 from ..helpers import grid_viz_permutation, grid_permutation
 
 
@@ -78,10 +78,12 @@ class PRMNumpy(MeshNumpyLayer):
 
         Args:
             units: The dimension of the unitary matrix (:math:`N`) to be modeled by this transformer
+            phases: The MeshPhases control parameters for the mesh
             tunable_layers_per_block: The number of tunable layers per block (overrides `num_tunable_layers_list`, `sampling_frequencies`)
             num_tunable_layers_list: Number of tunable layers in each block in order from left to right
             sampling_frequencies: Frequencies of sampling frequencies between the tunable layers
             bs_error: Photonic error in the beamsplitter
+            hadamard: Hadamard convention for the beamsplitters
             theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
             phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         """
@@ -91,4 +93,23 @@ class PRMNumpy(MeshNumpyLayer):
             PermutingRectangularMeshModel(units, tunable_layers_per_block, num_tunable_layers_list,
                                           sampling_frequencies, bs_error, hadamard,
                                           theta_init_name, phi_init_name), phases
+        )
+
+
+class BMNumpy(MeshNumpyLayer):
+    def __init__(self, num_layers: int, phases: Optional[MeshPhases] = None,
+                 bs_error: float = 0.0, hadamard: bool = False, theta_init_name: Optional[str] = 'random_theta',
+                 phi_init_name: Optional[str] = 'random_phi'):
+        """Butterfly mesh unitary layer (currently, only :math:`2^L` units allowed)
+
+        Args:
+            num_layers: The number of layers (:math:`L`), with dimension of the unitary matrix set to (:math:`N = 2^L`)
+            phases: The MeshPhases control parameters for the mesh
+            bs_error: Photonic error in the beamsplitter
+            hadamard: Hadamard convention for the beamsplitters
+            theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+            phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        """
+        super(BMNumpy, self).__init__(
+            ButterflyMeshModel(num_layers, hadamard, bs_error, theta_init_name, phi_init_name), phases
         )
