@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np
 
 from .generic import TransformerLayer, MeshLayer, CompoundTransformerLayer, PermutationLayer
-from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel
+from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel, ButterflyMeshModel
 from ..helpers import rectangular_permutation, butterfly_layer_permutation
 from ..config import DEFAULT_BASIS, TF_FLOAT, TF_COMPLEX
 
@@ -88,6 +88,29 @@ class PRM(MeshLayer):
             PermutingRectangularMeshModel(units, tunable_layers_per_block, num_tunable_layers_list,
                                           sampling_frequencies, bs_error, hadamard,
                                           theta_init_name, phi_init_name, gamma_init_name),
+            activation=activation, **kwargs
+        )
+
+
+class BM(MeshLayer):
+    """Butterfly mesh unitary layer
+
+    Args:
+        units: The dimension of the unitary matrix (:math:`N`)
+        hadamard: Hadamard convention for the beamsplitters
+        basis: Phase basis to use
+        bs_error: Beamsplitter split ratio error
+        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
+    """
+
+    def __init__(self, num_layers: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
+                 bs_error: float = 0.0, theta_init_name: Optional[str]="haar_tri",
+                 phi_init_name: Optional[str]="random_phi",
+                 activation: tf.keras.layers.Activation = None, **kwargs):
+        super(BM, self).__init__(
+            ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init_name, phi_init_name),
             activation=activation, **kwargs
         )
 

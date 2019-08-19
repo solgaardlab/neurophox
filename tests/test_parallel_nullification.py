@@ -21,7 +21,7 @@ def run_parallel_nullification(np_layer):
     perm_idx = np_layer.mesh.model.perm_idx
     num_tunable = np_layer.mesh.model.num_tunable
 
-    # run the real-time O(N) algorithm
+    # run the real-time O(L) algorithm
     for idx in range(num_layers):
         layer = num_layers - idx - 1
         if idx > 0:

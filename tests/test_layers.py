@@ -2,8 +2,8 @@ import tensorflow as tf
 
 from neurophox.config import TF_COMPLEX
 
-from neurophox.numpy import RMNumpy, TMNumpy, PRMNumpy
-from neurophox.tensorflow import RM, TM, PRM, MeshLayer
+from neurophox.numpy import RMNumpy, TMNumpy, PRMNumpy, BMNumpy
+from neurophox.tensorflow import RM, TM, PRM, BM, MeshLayer
 
 TEST_DIMENSIONS = [7, 8]
 
@@ -171,6 +171,34 @@ class NumpyCorrespondenceTest(tf.test.TestCase):
                 prm_tf = MeshLayer(prm_np.mesh.model)
                 self.assertAllClose(prm_tf.matrix, prm_np.matrix)
                 self.assertAllClose(prm_tf.matrix.conj().T, prm_np.inverse_matrix)
+
+    def test_bm_beamsplitter(self):
+        for units in TEST_DIMENSIONS:
+            for bs_error in (0, 0.1):
+                bm_np = PRMNumpy(
+                    units=units,
+                    hadamard=False,
+                    bs_error=bs_error
+                )
+                # set the testing to true and rebuild layer!
+                bm_np._setup(None, testing=True)
+                bm_tf = MeshLayer(bm_np.mesh.model)
+                self.assertAllClose(bm_tf.matrix, bm_np.matrix)
+                self.assertAllClose(bm_tf.matrix.conj().T, bm_np.inverse_matrix)
+
+    def test_bm_hadamard(self):
+        for units in TEST_DIMENSIONS:
+            for bs_error in (0, 0.1):
+                bm_np = PRMNumpy(
+                    units=units,
+                    hadamard=True,
+                    bs_error=bs_error
+                )
+                # set the testing to true and rebuild layer!
+                bm_np._setup(None, testing=True)
+                bm_tf = MeshLayer(bm_np.mesh.model)
+                self.assertAllClose(bm_tf.matrix, bm_np.matrix)
+                self.assertAllClose(bm_tf.matrix.conj().T, bm_np.inverse_matrix)
 
 
 if __name__ == '__main__':
