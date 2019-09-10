@@ -22,11 +22,13 @@ class LinearMultiModelRunner:
         iterations_per_epoch: Iterations per epoch
         iterations_per_tb_update: Iterations per update of TensorBoard
         logdir: Logging directory for TensorBoard to track losses of each layer (default to `None` for no logging)
+        train_on_test: Use same training and testing set
+        store_params: Store params during the training for visualization later
     """
     def __init__(self, experiment_name: str, layer_names: List[str],
                  layers: List[MeshLayer], optimizer: Union[tf.keras.optimizers.Optimizer, List[tf.keras.optimizers.Optimizer]],
                  batch_size: int, iterations_per_epoch: int=50, iterations_per_tb_update: int=5,
-                 logdir: Optional[str]=None):  # e.g., logdir=/data/tensorboard/neurophox/
+                 logdir: Optional[str]=None, train_on_test: bool=False, store_params: bool=True):  # e.g., logdir=/data/tensorboard/neurophox/
         self.losses = {name: [] for name in layer_names}
         self.results = {name: [] for name in layer_names}
         self.layer_names = layer_names
@@ -40,6 +42,8 @@ class LinearMultiModelRunner:
         self.iterations_per_tb_update = iterations_per_tb_update
         self.experiment_name = experiment_name
         self.logdir = logdir
+        self.train_on_test = train_on_test
+        self.store_params = store_params
         if self.logdir:
             self.summary_writers = {name: tf.summary.create_file_writer(
                 f'{self.logdir}/{experiment_name}/{name}/'
@@ -53,7 +57,11 @@ class LinearMultiModelRunner:
             target_unitary: Target unitary, :math:`U`.
 
         """
-        x_train, y_train = generate_keras_batch(self.layers[0].units, target_unitary, self.batch_size)
+        if self.train_on_test:
+            x_train, y_train = tf.eye(self.layers[0].units, dtype=TF_COMPLEX),\
+                               tf.convert_to_tensor(target_unitary, dtype=TF_COMPLEX)
+        else:
+            x_train, y_train = generate_keras_batch(self.layers[0].units, target_unitary, self.batch_size)
         for name, layer, optimizer in zip(self.layer_names, self.layers, self.optimizers):
             with tf.GradientTape() as tape:
                 loss = complex_mse(layer(x_train), y_train)
@@ -65,7 +73,7 @@ class LinearMultiModelRunner:
             )
             if self.iters % self.iterations_per_tb_update and self.logdir:
                 self.update_tensorboard(name)
-            if self.iters % self.iterations_per_epoch == 0:
+            if self.iters % self.iterations_per_epoch == 0 and self.store_params:
                 if not isinstance(layer, SVD):
                     phases = layer.phases
                     mask = layer.mesh.model.mask
