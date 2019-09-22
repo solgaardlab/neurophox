@@ -7,7 +7,7 @@
 ![CodeCov](https://img.shields.io/codecov/c/github/solgaardlab/neurophox/master.svg?style=for-the-badge)
 
 
-The [Neurophox module](https://neurophox.readthedocs.io) is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf) and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
+The [Neurophox module](https://neurophox.readthedocs.io) is an open source machine learning and photonic simulation framework based on unitary mesh networks presented in [arxiv/1909.06179](https://arxiv.org/pdf/1909.06179.pdf), [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf), and [arxiv/1903.04579](https://arxiv.org/pdf/1903.04579.pdf).
 
 ![neurophox](https://user-images.githubusercontent.com/7623867/57964658-87a79580-78ed-11e9-8f1e-c4af30c32e65.gif)
 
@@ -17,21 +17,9 @@ The [Neurophox module](https://neurophox.readthedocs.io) is an open source machi
 
 ## Motivation
 
-Integrated optical neural networks or photonic neural networks are an ASIC technology that uses light as a computing medium as opposed to conventional analog electronics. Such devices are a new and exciting option for low-energy and practical machine learning accelerator technologies that can be deployed in data centers where optical fibers and photonic technologies are already used to transmit and process data.
-
-Optical neural networks are composed of "optical matrix multipliers" (defined by two-port components arranged in a "unitary mesh" architecture as discussed in [arxiv/1808.00458](https://arxiv.org/pdf/1808.00458.pdf)) and optical nonlinearities such as [electro-optic activations](https://arxiv.org/pdf/1903.04579.pdf). 
-
-The interesting property of the unitary mesh matrix multiplier are that they behave differently from conventional matrix multipliers:
-1. They act as unitary operators rather than general linear operators, preserving the norm of the data flowing through the unitary mesh network.
-2. The matrix elements are not directly trained during backpropagation. Instead, "phase shifts" or Euler angle parameters are trained.
- 
-This puts optical mesh networks in an interesting and relatively unexplored regime of machine learning. For example, orthogonal and unitary neural networks might circumvent vanishing and exploding gradient problems due to norm-preserving property. Such networks have been studied for synthetic long-term memory natural language processing tasks (see [unitary mesh-based RNN](http://proceedings.mlr.press/v70/jing17a/jing17a.pdf), [unitary evolution RNN](https://arxiv.org/pdf/1511.06464.pdf), and [orthogonal evolution RNN](https://arxiv.org/pdf/1602.06662.pdf)). 
-
-## Introduction
-
-Neurophox provides a robust and general framework for mesh network layers in orthogonal and unitary neural networks. We use an efficient definition for any feedforward mesh architecture, `neurophox.meshmodel.MeshModel`, to develop mesh layer architectures in Numpy (`neurophox.numpy.layers`), Tensorflow 2 (`neurophox.tensorflow.layers`), and (soon) PyTorch.
-
-Scattering matrix models used in unitary mesh networks for photonics simulations are provided in `neurophox.components`. The models for all layers are fully defined in `neurophox.meshmodel`, which provides a general framework for efficient implementation of any feedforward unitary mesh network.
+Neurophox provides a robust and efficient framework for simulating **optical neural networks** (ONNs) that promise fast and energy-efficient machine learning. Scalable ONNs are made possible by integrated **nanophotonic matrix multipliers** represented by feedforward networks of 2 x 2 nodes, a technology that is being actively [developed](https://medium.com/lightmatter/matrix-processing-with-nanophotonics-998e294dabc1) in the optical domain using Mach-Zehnder interferometers (MZIs). Such matrix multipliers behave differently from conventional matrix multipliers:
+1. They act as unitary operators rather than general linear operators, preserving the norm of the data flowing through the network (i.e., intensity of the light is preserved due to energy conservation).
+2. The matrix elements are not directly trained during backpropagation. Instead, the node parameters are trained.
 
 ## Dependencies and requirements
 
@@ -75,7 +63,11 @@ conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
 pip install tensorflow-gpu==2.0.0-alpha0
 ```
 
-### Imports
+### Features
+
+Using Neurophox, we can simulate light physically propagating through such networks (using `layer.propagate`), and observe its equivalence to a _matrix operation_ (using `layer.matrix`).
+
+We demonstrate the **R**ectangular **M**esh (RM layer) using either `numpy` or `tensorflow`:
 
 ```python
 import numpy as np
@@ -91,34 +83,21 @@ np.allclose(tf_layer.matrix, np_layer.matrix)  # True
 np.allclose(tf_layer(np.eye(N)), np_layer.matrix)  # True
 ```
 
-### Inspection
+### Visualizations
 
-We can inspect the parameters for each layer using `neurophox.control.MeshPhases` which can be accessed via `tf_layer.phases` and `np_layer.phases`.
-
-
-We can inspect the matrix elements implemented by each layer as follows via `tf_layer.matrix` and `np_layer.matrix`.
-
-### Phase shift settings visualization
-The phase shift patterns used to generate the above propagation patterns can also be visualized by plotting `np_layer.phases`:
+We provide code to visualize network phase shift parameters and light propagation in [`neurophox-notebooks`](https://github.com/solgaardlab/neurophox-notebooks) for rectangular and triangular meshes.
 
 Rectangular mesh:
 ![neurophox](https://user-images.githubusercontent.com/7623867/57964850-aeb39680-78f0-11e9-8785-e6e46c705b34.png)
 Triangular mesh:
 ![neurophox](https://user-images.githubusercontent.com/7623867/57964852-aeb39680-78f0-11e9-8a5c-d08e9f6dce89.png)
 
-
-### Light propagation visualization
-
-For the phase shift settings above, we can visualize the propagation of light (field magnitude), as the data "flows" through the mesh.
+For the **phase shift settings** above, we visualize the **propagation of light** (scaled by light intensity), equivalently representing data "flowing" through the mesh.
 
 Rectangular mesh:
 ![neurophox](https://user-images.githubusercontent.com/7623867/57964851-aeb39680-78f0-11e9-9ff3-41e8cebd25a6.png)
 Triangular mesh:
 ![neurophox](https://user-images.githubusercontent.com/7623867/57964853-aeb39680-78f0-11e9-8cd4-1364d2cec339.png)
-
-
-The code to generate these visualization examples are provided in [`neurophox-notebooks`](https://github.com/solgaardlab/neurophox-notebooks).
-
 
 ### Small machine learning example
 
@@ -157,7 +136,16 @@ The code to generate the above example is provided in [`neurophox-notebooks`](ht
 Neurophox was written by Sunil Pai (email: sunilpai@stanford.edu).
 
 If you find this repository useful, please cite at least one of the following papers depending on your application:
-1. Optimization of unitary mesh networks:
+1. Definition and calibration of feedforward photonic networks:
+    ```text
+    @article{pai2019parallel,
+      title={Parallel fault-tolerant programming of an arbitrary feedforward photonic network},
+      author={Pai, Sunil and Williamson, Ian AD and Hughes, Tyler W and Minkov, Momchil and Solgaard, Olav and Fan, Shanhui and Miller, David AB},
+      journal={arXiv preprint arXiv:1909.06179},
+      year={2019}
+    }
+    ```
+2. Optimization of unitary mesh networks:
     ```text
     @article{pai_matrix_2019,
       author = {Pai, Sunil and Bartlett, Ben and Solgaard, Olav and Miller, David A. B.},
@@ -171,7 +159,7 @@ If you find this repository useful, please cite at least one of the following pa
       year = {2019}
     }
     ```
-2. Optical neural network nonlinearities:
+3. Optical neural network nonlinearities:
     ```text
     @article{williamson_reprogrammable_2020,
       author = {Williamson, I. A. D. and Hughes, T. W. and Minkov, M. and Bartlett, B. and Pai, S. and Fan, S.},
@@ -194,10 +182,5 @@ Neurophox is under development and is not yet stable.
 If you find a bug, have a question, or would like to recommend a feature, please submit an issue on Github.
 
 We welcome pull requests and contributions from the broader community. If you would like to contribute, please submit a pull request and title your branch `bug/bug-fix-title` or `feature/feature-title`.
-
-Some future feature ideas include:
-1. Implement multi-wavelength and multi-mode operators for photonics simulation using batch and broadcasting operations.
-2. Add nonlinearities and a unitary mesh-based RNN cell for use in deep learning architectures.
-
 
 
