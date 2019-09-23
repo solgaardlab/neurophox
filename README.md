@@ -17,9 +17,13 @@ The [Neurophox module](https://neurophox.readthedocs.io) is an open source machi
 
 ## Motivation
 
-Neurophox provides a robust and efficient framework for simulating **optical neural networks** (ONNs) that promise fast and energy-efficient machine learning. Scalable ONNs are made possible by integrated **nanophotonic matrix multipliers** represented by feedforward networks of 2 x 2 nodes, a technology that is being actively [developed](https://medium.com/lightmatter/matrix-processing-with-nanophotonics-998e294dabc1) in the optical domain using Mach-Zehnder interferometers (MZIs). Such matrix multipliers behave differently from conventional matrix multipliers:
-1. They act as unitary operators rather than general linear operators, preserving the norm of the data flowing through the network (i.e., intensity of the light is preserved due to energy conservation).
-2. The matrix elements are not directly trained during backpropagation. Instead, the node parameters are trained, and the matrix elements are nonlinear functions of those node parameters.
+Neurophox provides a robust and efficient framework for simulating **optical neural networks** (ONNs) that promise fast and energy-efficient machine learning. Scalable ONNs are made possible by integrated [**reconfigurable nanophotonic processors**](https://www.osapublishing.org/optica/abstract.cfm?uri=optica-5-12-1623), feedforward networks of 2 x 2 nodes that compute matrix multiplication by simply allowing light to flow through them (thus, a time- and energy-efficient way to compute).
+ 
+ Reconfigurable photonic networks are currently being [developed to scale](https://medium.com/lightmatter/matrix-processing-with-nanophotonics-998e294dabc1) in the optical domain using Mach-Zehnder interferometers (MZIs). Such matrix multiplier processors behave differently from conventional matrix multipliers:
+1. They act as **unitary operators rather than general linear operators**, preserving the norm of the data flowing through the network (i.e., intensity of the light is preserved due to energy conservation).
+2. The matrix elements are not directly trained during backpropagation. Instead, the node parameters are trained, and the **matrix elements are nonlinear functions of those node parameters**.
+
+The goal of Neurophox is to provide utilities for calibrating and training such processors for machine learning and other signal processing tasks. These simulated models might furthermore be useful for a relatively unexplored regime of machine learning: "unitary machine learning" (see e.g., [arxiv/1612.05231](https://arxiv.org/pdf/1612.05231.pdf)).
 
 ## Dependencies and requirements
 
