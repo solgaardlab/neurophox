@@ -1,2 +1,2 @@
-from .generic import MeshLayer, MeshVerticalLayer
+from .generic import MeshTorchLayer, MeshVerticalLayer
 from .layers import *

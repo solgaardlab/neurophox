@@ -1,12 +1,12 @@
 from typing import Optional, List
 
-from .generic import MeshLayer, PermutationLayer
+from .generic import MeshTorchLayer, PermutationLayer
 from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel, ButterflyMeshModel
 from ..helpers import rectangular_permutation, butterfly_layer_permutation
 from ..config import DEFAULT_BASIS
 
 
-class RM(MeshLayer):
+class RMTorch(MeshTorchLayer):
     """Rectangular mesh network layer for unitary operators implemented in tensorflow
 
     Args:
@@ -23,12 +23,12 @@ class RM(MeshLayer):
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = DEFAULT_BASIS,
                  bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_rect",
                  phi_init_name: Optional[str] = "random_phi", gamma_init_name: Optional[str] = "random_gamma"):
-        super(RM, self).__init__(
+        super(RMTorch, self).__init__(
             RectangularMeshModel(units, num_layers, hadamard, bs_error, basis,
                                  theta_init_name, phi_init_name, gamma_init_name))
 
 
-class TM(MeshLayer):
+class TMTorch(MeshTorchLayer):
     """Triangular mesh network layer for unitary operators implemented in tensorflow
 
     Args:
@@ -44,13 +44,13 @@ class TM(MeshLayer):
     def __init__(self, units: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
                  bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_tri",
                  phi_init_name: Optional[str] = "random_phi", gamma_init_name: Optional[str] = "random_gamma"):
-        super(TM, self).__init__(
+        super(TMTorch, self).__init__(
             TriangularMeshModel(units, hadamard, bs_error, basis,
                                 theta_init_name, phi_init_name, gamma_init_name)
         )
 
 
-class PRM(MeshLayer):
+class PRMTorch(MeshTorchLayer):
     """Permuting rectangular mesh unitary layer
 
     Args:
@@ -71,14 +71,14 @@ class PRM(MeshLayer):
                  gamma_init_name: Optional[str] = "random_gamma"):
         if theta_init_name == 'haar_prm' and tunable_layers_per_block is not None:
             raise NotImplementedError('haar_prm initializer is incompatible with setting tunable_layers_per_block.')
-        super(PRM, self).__init__(
+        super(PRMTorch, self).__init__(
             PermutingRectangularMeshModel(units, tunable_layers_per_block, num_tunable_layers_list,
                                           sampling_frequencies, bs_error, hadamard,
                                           theta_init_name, phi_init_name, gamma_init_name)
         )
 
 
-class BM(MeshLayer):
+class BMTorch(MeshTorchLayer):
     """Butterfly mesh unitary layer
 
     Args:
@@ -92,9 +92,10 @@ class BM(MeshLayer):
     def __init__(self, num_layers: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
                  bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_tri",
                  phi_init_name: Optional[str] = "random_phi"):
-        super(BM, self).__init__(
+        super(BMTorch, self).__init__(
             ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init_name, phi_init_name)
         )
+
 
 class RectangularPerm(PermutationLayer):
     """Rectangular permutation layer

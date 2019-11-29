@@ -112,7 +112,7 @@ class MeshVerticalLayer(TransformerLayer):
         return inputs
 
 
-class Mesh:
+class MeshTorch:
     def __init__(self, model: MeshModel):
         """
         General mesh network layer defined by MeshModel
@@ -160,7 +160,7 @@ class Mesh:
         return mesh_layers
 
 
-class MeshLayer(TransformerLayer):
+class MeshTorchLayer(TransformerLayer):
     """Mesh network layer for unitary operators implemented in numpy
 
     Args:
@@ -168,9 +168,9 @@ class MeshLayer(TransformerLayer):
     """
 
     def __init__(self, mesh_model: MeshModel, **kwargs):
-        self.mesh = Mesh(mesh_model)
+        self.mesh = MeshTorch(mesh_model)
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
-        super(MeshLayer, self).__init__(self.units, **kwargs)
+        super(MeshTorchLayer, self).__init__(self.units, **kwargs)
         self.theta, self.phi, self.gamma = self.mesh.model.init(backend=PYTORCH)
 
     def transform(self, inputs: torch.Tensor) -> torch.Tensor:
