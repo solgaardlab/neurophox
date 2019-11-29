@@ -1,17 +1,21 @@
-from typing import List
+from typing import List, Tuple
 
-import torch
-import torch.nn as nn
+try:
+    import torch
+    import torch.nn as nn
+except ImportError:
+    pass
+
 import numpy as np
 
 from ..config import PYTORCH
-from ..control import MeshPhases
+from ..control import MeshPhasesTorch
 from ..meshmodel import MeshModel
-from ..helpers import pairwise_off_diag_permutation, roll_torch, plot_complex_matrix
+from ..helpers import pairwise_off_diag_permutation, plot_complex_matrix
 
 
 class TransformerLayer(nn.Module):
-    def __init__(self, units: int, is_complex: bool=True, is_trainable: bool=False):
+    def __init__(self, units: int, is_complex: bool = True, is_trainable: bool = False):
         super(TransformerLayer, self).__init__()
         self.units = units
         self.is_trainable = is_trainable
@@ -24,12 +28,14 @@ class TransformerLayer(nn.Module):
         return outputs
 
     @property
-    def matrix(self):
-        return self.transform(np.eye(self.units, dtype=np.complex64)).numpy()
+    def matrix(self) -> np.ndarray:
+        torch_matrix = self.transform(np.eye(self.units, dtype=np.complex64)).detach().numpy()
+        return torch_matrix[0] + 1j * torch_matrix[1]
 
     @property
     def inverse_matrix(self):
-        return self.inverse_transform(np.eye(self.units, dtype=np.complex64)).numpy()
+        torch_matrix = self.inverse_transform(np.eye(self.units, dtype=np.complex64)).detach().numpy()
+        return torch_matrix[0] + 1j * torch_matrix[1]
 
     def plot(self, plt):
         plot_complex_matrix(plt, self.matrix)
@@ -39,8 +45,8 @@ class TransformerLayer(nn.Module):
 
 
 class CompoundTransformerLayer(TransformerLayer):
-    def __init__(self, units: int, transformer_list: List[TransformerLayer], is_complex: bool=True,
-                 is_trainable: bool=False):
+    def __init__(self, units: int, transformer_list: List[TransformerLayer], is_complex: bool = True,
+                 is_trainable: bool = False):
         self.transformer_list = transformer_list
         super(CompoundTransformerLayer, self).__init__(units=units, is_complex=is_complex, is_trainable=is_trainable)
 
@@ -59,59 +65,51 @@ class CompoundTransformerLayer(TransformerLayer):
 
 class PermutationLayer(TransformerLayer):
     def __init__(self, permuted_indices: np.ndarray):
-        super(PermutationLayer, self).__init__(units=len(permuted_indices))
-        self.units = len(permuted_indices)
-        self.permuted_indices = torch.as_tensor(np.asarray(permuted_indices, dtype=np.int32))
+        super(PermutationLayer, self).__init__(units=permuted_indices.shape[0])
+        self.units = permuted_indices.shape[0]
+        self.permuted_indices = torch.as_tensor(np.asarray(permuted_indices, dtype=np.long))
         self.inv_permuted_indices = torch.as_tensor(np.zeros_like(self.permuted_indices))
         for idx, perm_idx in enumerate(self.permuted_indices):
             self.inv_permuted_indices[perm_idx] = idx
 
     def transform(self, inputs: torch.Tensor):
-        return inputs.gather(dim=-1, index=self.permuted_indices)
+        return inputs[..., self.permuted_indices]
 
     def inverse_transform(self, outputs: torch.Tensor):
-        return outputs.gather(dim=-1, index=self.inv_permuted_indices)
+        return outputs[..., self.inv_permuted_indices]
 
 
 class MeshVerticalLayer(TransformerLayer):
-    def __init__(self, units: int, diag: torch.Tensor, off_diag: torch.Tensor,
-                 perm: PermutationLayer=None, right_perm: PermutationLayer=None):
+    def __init__(self, pairwise_perm_idx: np.ndarray, diag: torch.Tensor, off_diag: torch.Tensor,
+                 right_perm: PermutationLayer = None, left_perm: PermutationLayer = None):
         self.diag = diag
         self.off_diag = off_diag
-        self.perm = perm
+        self.pairwise_perm_idx = pairwise_perm_idx
+        super(MeshVerticalLayer, self).__init__(pairwise_perm_idx.shape[0])
+        self.left_perm = left_perm
         self.right_perm = right_perm
-        self.pairwise_perm_idx = pairwise_off_diag_permutation(units)
-        super(MeshVerticalLayer, self).__init__(units)
 
-    def transform(self, inputs: torch.Tensor):
-        outputs = inputs.transpose(0, 1) if self.perm is None else self.perm.transform(inputs)
-        diag_out = torch.stack(
-            (outputs[0] * self.diag[0] - outputs[1] * self.diag[1],
-             outputs[1] * self.diag[0] + outputs[0] * self.diag[1])
-        )
-        off_diag_out = torch.stack(
-            (outputs[0] * self.off_diag[0] + outputs[1] * self.off_diag[1],
-             outputs[1] * self.off_diag[0] + outputs[0] * self.off_diag[1])
-        )
-        outputs = diag_out + off_diag_out.gather(dim=-1, index=self.pairwise_perm_idx)
+    def transform(self, inputs: torch.Tensor) -> torch.Tensor:
+        if isinstance(inputs, np.ndarray):
+            inputs = to_complex_t(inputs)
+        outputs = inputs if self.left_perm is None else self.left_perm.transform(inputs)
+        diag_out = cc_mul(outputs, self.diag)
+        off_diag_out = cc_mul(outputs, self.off_diag)
+        outputs = diag_out + off_diag_out[..., self.pairwise_perm_idx]
         outputs = outputs if self.right_perm is None else self.right_perm.transform(outputs)
-        return outputs.transpose(0, 1)
+        return outputs
 
-    def inverse_transform(self, outputs: torch.Tensor):
-        inputs = outputs.transpose(0, 1) if self.right_perm is None else self.right_perm.transform(outputs)
-        diag = self.diag
-        off_diag = self.off_diag.gather(dim=1, index=self.pairwise_perm_idx)
-        diag_out = torch.stack(
-            (inputs[0] * diag[0] + inputs[1] * diag[1],
-             -inputs[1] * diag[0] + inputs[0] * diag[1])
-        )
-        off_diag_out = torch.stack(
-            (inputs[0] * off_diag[0] + inputs[1] * off_diag[1],
-             -inputs[1] * off_diag[0] + inputs[0] * off_diag[1])
-        )
-        inputs = diag_out + off_diag_out.gather(dim=-1, index=self.pairwise_perm_idx)
-        inputs = inputs if self.perm is None else self.perm.transform(inputs)
-        return inputs.transpose(0, 1)
+    def inverse_transform(self, outputs: torch.Tensor) -> torch.Tensor:
+        if isinstance(outputs, np.ndarray):
+            outputs = to_complex_t(outputs)
+        inputs = outputs if self.right_perm is None else self.right_perm.inverse_transform(outputs)
+        diag = conj_t(self.diag)
+        off_diag = conj_t(self.off_diag[..., self.pairwise_perm_idx])
+        diag_out = cc_mul(inputs, diag)
+        off_diag_out = cc_mul(inputs, off_diag)
+        inputs = diag_out + off_diag_out[..., self.pairwise_perm_idx]
+        inputs = inputs if self.left_perm is None else self.left_perm.inverse_transform(inputs)
+        return inputs
 
 
 class Mesh:
@@ -124,45 +122,41 @@ class Mesh:
         """
         self.model = model
         self.units, self.num_layers = self.model.units, self.model.num_layers
-        self.e_l = self.model.get_bs_error_matrix(right=False)
-        if self.model.use_different_errors:
-            self.e_r = self.model.get_bs_error_matrix(right=True)
-        else:
-            self.e_r = self.e_l
-        enn, enp, epn, epp = self.model.mzi_error_tensors
-        self.enn = torch.stack((enn, enn))
-        self.enp = torch.stack((enp, enp))
-        self.epn = torch.stack((epn, epn))
-        self.epp = torch.stack((epp, epp))
+        self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
+        self.enn, self.enp, self.epn, self.epp = self.model.mzi_error_tensors_t
+        self.perm_layers = [PermutationLayer(self.model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
-    def mesh_layers(self, phases: MeshPhases):
-        raise NotImplementedError("Pytorch is not yet supported.")
+    def mesh_layers(self, phases: MeshPhasesTorch) -> List[MeshVerticalLayer]:
         internal_psl = phases.internal_phase_shift_layers
         external_psl = phases.external_phase_shift_layers
 
         # smooth trick to efficiently perform the layerwise coupling computation
 
         if self.model.hadamard:
-            s11 = (self.epp * internal_psl + self.enn * roll_torch(internal_psl, up=True))
-            s22 = roll_torch(self.enn * internal_psl + self.epp * roll_torch(internal_psl, up=True))
-            s12 = roll_torch(self.enp * internal_psl - self.epn * roll_torch(internal_psl, up=True))
-            s21 = (self.epn * internal_psl - self.enp * roll_torch(internal_psl, up=True))
+            s11 = rc_mul(self.epp, internal_psl) + rc_mul(self.enn, internal_psl.roll(-1, 1))
+            s22 = (rc_mul(self.enn, internal_psl) + rc_mul(self.epp, internal_psl.roll(-1, 1))).roll(1, 1)
+            s12 = (rc_mul(self.enp, internal_psl) - rc_mul(self.epn, internal_psl.roll(-1, 1))).roll(1, 1)
+            s21 = rc_mul(self.epn, internal_psl) - rc_mul(self.enp, internal_psl.roll(-1, 1))
         else:
-            s11 = (self.epp * internal_psl - self.enn * roll_torch(internal_psl, up=True))
-            s22 = roll_torch(-self.enn * internal_psl + self.epp * roll_torch(internal_psl, up=True))
-            s12 = 1j * roll_torch(self.enp * internal_psl + self.epn * roll_torch(internal_psl, up=True))
-            s21 = 1j * (self.epn * internal_psl + self.enp * roll_torch(internal_psl, up=True))
+            s11 = rc_mul(self.epp, internal_psl) - rc_mul(self.enn, internal_psl.roll(-1, 1))
+            s22 = (-rc_mul(self.enn, internal_psl) + rc_mul(self.epp, internal_psl.roll(-1, 1))).roll(1, 1)
+            s12 = s_mul(1j, (rc_mul(self.enp, internal_psl) + rc_mul(self.epn, internal_psl.roll(-1, 1))).roll(1, 1))
+            s21 = s_mul(1j, (rc_mul(self.epn, internal_psl) + rc_mul(self.enp, internal_psl.roll(-1, 1))))
 
-        diag_layers = external_psl * (s11 + s22) / 2
-        off_diag_layers = roll_torch(external_psl) * (s21 + s12) / 2
+        diag_layers = cc_mul(external_psl, s11 + s22) / 2
+        off_diag_layers = cc_mul(external_psl.roll(1, 1), s21 + s12) / 2
 
-        mesh_layers = []
-        for layer in range(self.num_layers - 1):
-            mesh_layers.append(MeshVerticalLayer(self.units, diag_layers[:, layer], off_diag_layers[:, layer],
-                                                 PermutationLayer(self.model.perm_idx[layer])))
-        mesh_layers.append(MeshVerticalLayer(self.units, diag_layers[-1], off_diag_layers[-1],
-                                             PermutationLayer(self.model.perm_idx[-2]),
-                                             PermutationLayer(self.model.perm_idx[-1])))
+        if self.units % 2:
+            diag_layers = torch.cat((diag_layers[:, :-1], to_complex_t(np.ones((1, diag_layers.size()[-1])))), dim=1)
+
+        diag_layers, off_diag_layers = diag_layers.transpose(1, 2), off_diag_layers.transpose(1, 2)
+
+        mesh_layers = [MeshVerticalLayer(
+            self.pairwise_perm_idx, diag_layers[:, 0], off_diag_layers[:, 0], self.perm_layers[1], self.perm_layers[0])]
+        for layer in range(1, self.num_layers):
+            mesh_layers.append(MeshVerticalLayer(self.pairwise_perm_idx, diag_layers[:, layer],
+                                                 off_diag_layers[:, layer], self.perm_layers[layer + 1]))
+
         return mesh_layers
 
 
@@ -172,26 +166,84 @@ class MeshLayer(TransformerLayer):
     Args:
         mesh_model: The model of the mesh network (e.g., rectangular, triangular, butterfly)
     """
-    def __init__(self, mesh_model: MeshModel):
+
+    def __init__(self, mesh_model: MeshModel, **kwargs):
         self.mesh = Mesh(mesh_model)
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
+        super(MeshLayer, self).__init__(self.units, **kwargs)
         self.theta, self.phi, self.gamma = self.mesh.model.init(backend=PYTORCH)
-        super(MeshLayer, self).__init__(self.units)
 
     def transform(self, inputs: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("Pytorch is not yet supported.")
+        mesh_phases = MeshPhasesTorch(
+            theta=self.theta,
+            phi=self.phi,
+            mask=self.mesh.model.mask,
+            gamma=self.gamma,
+            hadamard=self.mesh.model.hadamard,
+            units=self.units,
+            basis=self.mesh.model.basis
+        )
+        mesh_layers = self.mesh.mesh_layers(mesh_phases)
+        if isinstance(inputs, np.ndarray):
+            inputs = to_complex_t(inputs)
+        outputs = cc_mul(inputs, mesh_phases.input_phase_shift_layer)
+        for layer in range(self.num_layers):
+            outputs = mesh_layers[layer].transform(outputs)
+        return outputs
 
     def inverse_transform(self, outputs: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("Pytorch is not yet supported.")
+        mesh_phases = MeshPhasesTorch(
+            theta=self.theta,
+            phi=self.phi,
+            mask=self.mesh.model.mask,
+            gamma=self.gamma,
+            hadamard=self.mesh.model.hadamard,
+            units=self.units,
+            basis=self.mesh.model.basis
+        )
+        mesh_layers = self.mesh.mesh_layers(mesh_phases)
+        inputs = to_complex_t(outputs) if isinstance(outputs, np.ndarray) else outputs
+        for layer in reversed(range(self.num_layers)):
+            inputs = mesh_layers[layer].inverse_transform(inputs)
+        inputs = cc_mul(inputs, conj_t(mesh_phases.input_phase_shift_layer))
+        return inputs
 
     def adjoint_transform(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.inverse_transform(inputs)
 
     @property
-    def phases(self) -> MeshPhases:
-        return MeshPhases(
+    def phases(self) -> MeshPhasesTorch:
+        return MeshPhasesTorch(
             theta=self.theta.numpy() * self.mesh.model.mask,
             phi=self.phi.numpy() * self.mesh.model.mask,
             mask=self.mesh.model.mask,
-            gamma=self.gamma.numpy()
+            gamma=self.gamma.numpy(),
+            units=self.units
         )
+
+# temporary helpers until pytorch supports complex numbers...which should be soon!
+# rc_mul is "real * complex" op
+# cc_mul is "complex * complex" op
+# s_mul is "complex scalar * complex" op
+
+
+def rc_mul(real: torch.Tensor, comp: torch.Tensor):
+    return real.unsqueeze(dim=0) * comp
+
+
+def cc_mul(comp1: torch.Tensor, comp2: torch.Tensor) -> torch.Tensor:
+    real = comp1[0] * comp2[0] - comp1[1] * comp2[1]
+    comp = comp1[0] * comp2[1] + comp1[1] * comp2[0]
+    return torch.stack((real, comp), dim=0)
+
+
+def s_mul(s: np.complex, comp: torch.Tensor):
+    return s.real * comp + torch.stack((-s.imag * comp[1], s.imag * comp[0]))
+
+
+def conj_t(comp: torch.Tensor):
+    return torch.stack((comp[0], -comp[1]), dim=0)
+
+
+def to_complex_t(nparray: np.ndarray):
+    return torch.stack((torch.as_tensor(nparray.real), torch.as_tensor(nparray.imag)), dim=0)

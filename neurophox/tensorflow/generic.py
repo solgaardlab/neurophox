@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
 import tensorflow as tf
+from tensorflow.keras.layers import Layer, Activation
 import numpy as np
 
 from ..control import MeshPhases, MeshPhasesTensorflow
@@ -9,7 +10,7 @@ from ..helpers import pairwise_off_diag_permutation, roll_tensor, plot_complex_m
 from ..config import TFKERAS
 
 
-class TransformerLayer(tf.keras.layers.Layer):
+class TransformerLayer(Layer):
     """Base transformer class for transformer layers (invertible functions, usually linear)
 
     Args:
@@ -17,7 +18,7 @@ class TransformerLayer(tf.keras.layers.Layer):
         is_complex: Whether the input to be transformed is complex or not
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
-    def __init__(self, units: int, is_complex: bool = True, activation: tf.keras.layers.Activation = None, **kwargs):
+    def __init__(self, units: int, is_complex: bool = True, activation: Activation = None, **kwargs):
         self.units = units
         self.is_complex = is_complex
         self.activation = activation
@@ -256,7 +257,7 @@ class Mesh:
         self.model = model
         self.units, self.num_layers = self.model.units, self.model.num_layers
         self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
-        self.enn, self.enp, self.epn, self.epp = self.model.mzi_error_tensors
+        self.enn, self.enp, self.epn, self.epp = self.model.mzi_error_tensors_tf
         self.perm_layers = [PermutationLayer(self.model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
     def mesh_layers(self, phases: MeshPhasesTensorflow) -> List[MeshVerticalLayer]:
@@ -307,7 +308,7 @@ class MeshLayer(TransformerLayer):
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
-    def __init__(self, mesh_model: MeshModel, activation: tf.keras.layers.Activation = None,
+    def __init__(self, mesh_model: MeshModel, activation: Activation = None,
                  include_diagonal_phases: bool = True, **kwargs):
         self.mesh = Mesh(mesh_model)
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers

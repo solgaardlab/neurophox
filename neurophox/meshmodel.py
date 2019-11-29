@@ -1,6 +1,7 @@
 from typing import Optional, Union, Tuple, List
 import numpy as np
 import tensorflow as tf
+import torch
 from .helpers import butterfly_permutation, grid_permutation, to_stripe_array, prm_permutation, \
     get_efficient_coarse_grain_block_sizes, get_default_coarse_grain_block_sizes
 from .initializers import get_initializer
@@ -48,7 +49,8 @@ class MeshModel:
             raise ValueError("units must be at least 2.")
 
     def init(self, backend: str = NUMPY) -> Union[Tuple[np.ndarray, np.ndarray, np.ndarray],
-                                                  Tuple[tf.Variable, tf.Variable, tf.Variable]]:
+                                                  Tuple[tf.Variable, tf.Variable, tf.Variable],
+                                                  Tuple[torch.nn.Parameter, torch.nn.Parameter, torch.nn.Parameter]]:
         """
 
         Args:
@@ -65,7 +67,7 @@ class MeshModel:
         elif backend == TFKERAS:
             return theta_init.to_tf("theta"), phi_init.to_tf("phi"), gamma_init.to_tf("gamma")
         else:
-            raise NotImplementedError(f"Backend {backend} not supported.")
+            return theta_init.to_torch(), phi_init.to_torch(), gamma_init.to_torch()
 
     def get_bs_error_matrix(self, right: bool):
         """
@@ -101,12 +103,7 @@ class MeshModel:
         return e_l, e_r
 
     @property
-    def mzi_error_tensors(self) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
-        """
-
-        Returns:
-            Error tensors for Tensorflow :code:`MeshLayer`
-        """
+    def mzi_error_tensors(self):
         e_l, e_r = self.mzi_error_matrices
 
         enn = to_stripe_array(np.sqrt(1 - e_l) * np.sqrt(1 - e_r), self.units)
@@ -114,8 +111,27 @@ class MeshModel:
         enp = to_stripe_array(np.sqrt(1 - e_l) * np.sqrt(1 + e_r), self.units)
         epp = to_stripe_array(np.sqrt(1 + e_l) * np.sqrt(1 + e_r), self.units)
 
+        return enn, epn, enp, epp
+
+    @property
+    def mzi_error_tensors_tf(self) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
+        """
+
+        Returns:
+            Error tensors for Tensorflow :code:`MeshLayer`
+        """
+        enn, epn, enp, epp = self.mzi_error_tensors
         return tf.constant(enn, dtype=TF_COMPLEX), tf.constant(enp, dtype=TF_COMPLEX), \
                tf.constant(epn, dtype=TF_COMPLEX), tf.constant(epp, dtype=TF_COMPLEX)
+
+    @property
+    def mzi_error_tensors_t(self) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Returns:
+            Error tensors for Torch :code:`MeshLayer`
+        """
+        enn, epn, enp, epp = self.mzi_error_tensors
+        return torch.as_tensor(enn), torch.as_tensor(enp), torch.as_tensor(epn), torch.as_tensor(epp)
 
 
 class RectangularMeshModel(MeshModel):

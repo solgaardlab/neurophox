@@ -1,6 +1,7 @@
 from typing import Optional, List, Dict
 
 import tensorflow as tf
+from tensorflow.keras.layers import Activation
 import numpy as np
 
 from .generic import TransformerLayer, MeshLayer, CompoundTransformerLayer, PermutationLayer
@@ -25,9 +26,9 @@ class RM(MeshLayer):
     """
 
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init_name: Optional[str]="haar_rect",
-                 phi_init_name: Optional[str]="random_phi", gamma_init_name: Optional[str]="random_gamma",
-                 include_diagonal_phases=True, activation: tf.keras.layers.Activation = None, **kwargs):
+                 bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_rect",
+                 phi_init_name: Optional[str] = "random_phi", gamma_init_name: Optional[str] = "random_gamma",
+                 include_diagonal_phases=True, activation: Activation = None, **kwargs):
         super(RM, self).__init__(
             RectangularMeshModel(units, num_layers, hadamard, bs_error, basis,
                                  theta_init_name, phi_init_name, gamma_init_name),
@@ -50,9 +51,9 @@ class TM(MeshLayer):
     """
 
     def __init__(self, units: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init_name: Optional[str]="haar_tri",
-                 phi_init_name: Optional[str]="random_phi", gamma_init_name: Optional[str]="random_gamma",
-                 activation: tf.keras.layers.Activation = None, **kwargs):
+                 bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_tri",
+                 phi_init_name: Optional[str] = "random_phi", gamma_init_name: Optional[str] = "random_gamma",
+                 activation: Activation = None, **kwargs):
         super(TM, self).__init__(
             TriangularMeshModel(units, hadamard, bs_error, basis,
                                 theta_init_name, phi_init_name, gamma_init_name),
@@ -81,7 +82,7 @@ class PRM(MeshLayer):
                  bs_error: float = 0.0, hadamard: bool = False,
                  theta_init_name: Optional[str] = "haar_prm", phi_init_name: Optional[str] = "random_phi",
                  gamma_init_name: Optional[str] = "random_gamma",
-                 activation: tf.keras.layers.Activation = None, **kwargs):
+                 activation: Activation = None, **kwargs):
         if theta_init_name == 'haar_prm' and tunable_layers_per_block is not None:
             raise NotImplementedError('haar_prm initializer is incompatible with setting tunable_layers_per_block.')
         super(PRM, self).__init__(
@@ -106,9 +107,9 @@ class BM(MeshLayer):
     """
 
     def __init__(self, num_layers: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init_name: Optional[str]="haar_tri",
-                 phi_init_name: Optional[str]="random_phi",
-                 activation: tf.keras.layers.Activation = None, **kwargs):
+                 bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_tri",
+                 phi_init_name: Optional[str] = "random_phi",
+                 activation: Activation = None, **kwargs):
         super(BM, self).__init__(
             ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init_name, phi_init_name),
             activation=activation, **kwargs
@@ -130,8 +131,9 @@ class SVD(CompoundTransformerLayer):
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
-    def __init__(self, units: int, mesh_dict: Dict, output_units: Optional[int] = None, pos_singular_values: bool = False,
-                 activation: tf.keras.layers.Activation = None):
+    def __init__(self, units: int, mesh_dict: Dict, output_units: Optional[int] = None,
+                 pos_singular_values: bool = False,
+                 activation: Activation = None):
         self.units = units
         self.output_units = output_units if output_units is not None else units
         if output_units != units and output_units is not None:

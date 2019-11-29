@@ -1,8 +1,13 @@
 import numpy as np
-import torch
+
+try:
+    import torch
+except ImportError:
+    pass
+
 import tensorflow as tf
 
-from ..helpers import roll_tensor, roll_torch, to_stripe_array, to_stripe_tensor,\
+from ..helpers import roll_tensor, to_stripe_array, to_stripe_tensor,\
     to_stripe_torch, to_rm_checkerboard
 
 
@@ -202,12 +207,12 @@ class MeshParamTorch:
     @property
     def common_mode_arrangement(self) -> tf.Tensor:
         phases = self.single_mode_arrangement
-        return phases + roll_torch(phases)
+        return phases + phases.roll(1, 0)
 
     @property
     def differential_mode_arrangement(self) -> tf.Tensor:
         phases = self.single_mode_arrangement
-        return phases / 2 - roll_torch(phases / 2)
+        return phases / 2 - phases.roll(1, 0) / 2
 
     def __add__(self, other):
         return MeshParamTorch(self.param + other.param, self.units)

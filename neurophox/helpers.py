@@ -2,7 +2,10 @@ from typing import Optional, Callable, Tuple
 
 import numpy as np
 import tensorflow as tf
-import torch
+try:
+    import torch
+except ImportError:
+    pass
 from .components import BlochMZI
 from scipy.stats import multivariate_normal
 
@@ -143,14 +146,14 @@ def to_stripe_torch(tensor: torch.Tensor, units: int):
     Returns:
         A general mesh stripe tensor arrangement that is of size (`units`, `num_layers`)
     """
-    num_layers = tensor.size()[0]
+    num_layers = tensor.shape[0]
     tensor_t = tensor.t()
     stripe_tensor = torch.zeros(units, num_layers)
     if units % 2:
         stripe_tensor[:-1][::2] = tensor_t
     else:
         stripe_tensor[::2] = tensor_t
-    return tensor_t
+    return stripe_tensor
 
 
 def to_rm_checkerboard_torch(tensor_0: torch.Tensor, tensor_1: torch.Tensor):
@@ -202,10 +205,10 @@ def roll_tensor(tensor: tf.Tensor, up=False):
     return tf.concat([tensor[tf.newaxis, -1], tensor[:-1]], axis=0)
 
 
-def roll_torch(x: torch.Tensor, up=False):
-    if up:
-        return torch.cat([x[1:], x[:1]], dim=0)
-    return torch.cat((x[-1:], x[:-1]), dim=0)
+# def roll_torch(x: torch.Tensor, up=False, complex=True):
+#     if up:
+#         return torch.cat([x[1:], x[:1]], dim=0)
+#     return torch.cat((x[-1:], x[:-1]), dim=0)
 
 
 def get_mesh_boundary_correction(units: int, num_layers: int, use_np: bool=False):

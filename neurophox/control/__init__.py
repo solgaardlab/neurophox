@@ -1,2 +1,2 @@
-from .phases import MeshPhases, MeshPhasesTensorflow
-from .param import MeshParam, MeshParamTensorflow
+from .phases import MeshPhases, MeshPhasesTensorflow, MeshPhasesTorch
+from .param import MeshParam, MeshParamTensorflow, MeshParamTorch
