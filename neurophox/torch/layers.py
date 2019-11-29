@@ -90,7 +90,7 @@ class BMTorch(MeshTorchLayer):
     """
 
     def __init__(self, num_layers: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_tri",
+                 bs_error: float = 0.0, theta_init_name: Optional[str] = "random_theta",
                  phi_init_name: Optional[str] = "random_phi"):
         super(BMTorch, self).__init__(
             ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init_name, phi_init_name)

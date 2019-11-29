@@ -107,7 +107,7 @@ class BM(MeshLayer):
     """
 
     def __init__(self, num_layers: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_tri",
+                 bs_error: float = 0.0, theta_init_name: Optional[str] = "random_theta",
                  phi_init_name: Optional[str] = "random_phi",
                  activation: Activation = None, **kwargs):
         super(BM, self).__init__(

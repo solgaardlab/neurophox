@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 try:
     import torch
-    import torch.nn as nn
+    from torch.nn import Module
 except ImportError:
     pass
 
@@ -14,7 +14,7 @@ from ..meshmodel import MeshModel
 from ..helpers import pairwise_off_diag_permutation, plot_complex_matrix
 
 
-class TransformerLayer(nn.Module):
+class TransformerLayer(Module):
     def __init__(self, units: int, is_complex: bool = True, is_trainable: bool = False):
         super(TransformerLayer, self).__init__()
         self.units = units
@@ -92,11 +92,11 @@ class MeshVerticalLayer(TransformerLayer):
     def transform(self, inputs: torch.Tensor) -> torch.Tensor:
         if isinstance(inputs, np.ndarray):
             inputs = to_complex_t(inputs)
-        outputs = inputs if self.left_perm is None else self.left_perm.transform(inputs)
+        outputs = inputs if self.left_perm is None else self.left_perm(inputs)
         diag_out = cc_mul(outputs, self.diag)
         off_diag_out = cc_mul(outputs, self.off_diag)
         outputs = diag_out + off_diag_out[..., self.pairwise_perm_idx]
-        outputs = outputs if self.right_perm is None else self.right_perm.transform(outputs)
+        outputs = outputs if self.right_perm is None else self.right_perm(outputs)
         return outputs
 
     def inverse_transform(self, outputs: torch.Tensor) -> torch.Tensor:
