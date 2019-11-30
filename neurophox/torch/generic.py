@@ -192,40 +192,83 @@ class MeshPhasesTorch:
         return torch.stack((external_ps.cos(), external_ps.sin()), dim=0)
 
 
-class MeshTorch:
-    def __init__(self, model: MeshModel):
-        """
-        General mesh network layer defined by MeshModel
+class MeshTorchLayer(TransformerLayer):
+    """Mesh network layer for unitary operators implemented in numpy
 
-        Args:
-            model: MeshModel to define the overall mesh structure and errors
-        """
-        self.model = model
-        self.units, self.num_layers = self.model.units, self.model.num_layers
+    Args:
+        mesh_model: The model of the mesh network (e.g., rectangular, triangular, butterfly)
+    """
+
+    def __init__(self, mesh_model: MeshModel, **kwargs):
+        super(MeshTorchLayer, self).__init__(mesh_model.units, **kwargs)
+        self.mesh_model = mesh_model
+        enn, enp, epn, epp = self.mesh_model.mzi_error_tensors
+        enn, enp, epn, epp = torch.from_numpy(enn), torch.from_numpy(enp), torch.from_numpy(epn), torch.from_numpy(epp)
+        self.register_buffer("enn", enn)
+        self.register_buffer("enp", enp)
+        self.register_buffer("epn", epn)
+        self.register_buffer("epp", epp)
+        theta_init, phi_init, gamma_init = self.mesh_model.init()
+        self.units, self.num_layers = self.mesh_model.units, self.mesh_model.num_layers
+        self.theta, self.phi, self.gamma = theta_init.to_torch(), phi_init.to_torch(), gamma_init.to_torch()
         self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
-        self.enn, self.enp, self.epn, self.epp = self.model.mzi_error_tensors
-        self.perm_layers = [PermutationLayer(self.model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
+        self.perm_layers = [PermutationLayer(self.mesh_model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
+
+    def transform(self, inputs: torch.Tensor) -> torch.Tensor:
+        mesh_phases = MeshPhasesTorch(
+            theta=self.theta, phi=self.phi, gamma=self.gamma,
+            mask=self.mesh_model.mask, hadamard=self.mesh_model.hadamard,
+            units=self.units, basis=self.mesh_model.basis
+        )
+        mesh_layers = self.mesh_layers(mesh_phases)
+        if isinstance(inputs, np.ndarray):
+            inputs = to_complex_t(inputs, self.theta.device)
+        outputs = cc_mul(inputs, mesh_phases.input_phase_shift_layer)
+        for layer in range(self.num_layers):
+            outputs = mesh_layers[layer].transform(outputs)
+        return outputs
+
+    def inverse_transform(self, outputs: torch.Tensor) -> torch.Tensor:
+        mesh_phases = MeshPhasesTorch(
+            theta=self.theta, phi=self.phi, gamma=self.gamma,
+            mask=self.mesh_model.mask, hadamard=self.mesh_model.hadamard,
+            units=self.units, basis=self.mesh_model.basis
+        )
+        mesh_layers = self.mesh_layers(mesh_phases)
+        inputs = to_complex_t(outputs, self.theta.device) if isinstance(outputs, np.ndarray) else outputs
+        for layer in reversed(range(self.num_layers)):
+            inputs = mesh_layers[layer].inverse_transform(inputs)
+        inputs = cc_mul(inputs, conj_t(mesh_phases.input_phase_shift_layer))
+        return inputs
+
+    def adjoint_transform(self, inputs: torch.Tensor) -> torch.Tensor:
+        return self.inverse_transform(inputs)
+
+    @property
+    def phases(self) -> MeshPhases:
+        return MeshPhases(
+            theta=self.theta.detach().numpy() * self.mesh_model.mask,
+            phi=self.phi.detach().numpy() * self.mesh_model.mask,
+            mask=self.mesh_model.mask,
+            gamma=self.gamma.detach().numpy()
+        )
 
     def mesh_layers(self, phases: MeshPhasesTorch) -> List[MeshVerticalLayer]:
         internal_psl = phases.internal_phase_shift_layers
         external_psl = phases.external_phase_shift_layers
-        device = internal_psl.device
-
-        enn, enp, epn, epp = torch.as_tensor(self.enn, device=device), torch.as_tensor(self.enp, device=device), \
-                             torch.as_tensor(self.epn, device=device), torch.as_tensor(self.epp, device=device)
 
         # smooth trick to efficiently perform the layerwise coupling computation
 
-        if self.model.hadamard:
-            s11 = rc_mul(epp, internal_psl) + rc_mul(enn, internal_psl.roll(-1, 1))
-            s22 = (rc_mul(enn, internal_psl) + rc_mul(epp, internal_psl.roll(-1, 1))).roll(1, 1)
-            s12 = (rc_mul(enp, internal_psl) - rc_mul(epn, internal_psl.roll(-1, 1))).roll(1, 1)
-            s21 = rc_mul(epn, internal_psl) - rc_mul(enp, internal_psl.roll(-1, 1))
+        if self.mesh_model.hadamard:
+            s11 = rc_mul(self.epp, internal_psl) + rc_mul(self.enn, internal_psl.roll(-1, 1))
+            s22 = (rc_mul(self.enn, internal_psl) + rc_mul(self.epp, internal_psl.roll(-1, 1))).roll(1, 1)
+            s12 = (rc_mul(self.enp, internal_psl) - rc_mul(self.epn, internal_psl.roll(-1, 1))).roll(1, 1)
+            s21 = rc_mul(self.epn, internal_psl) - rc_mul(self.enp, internal_psl.roll(-1, 1))
         else:
-            s11 = rc_mul(epp, internal_psl) - rc_mul(enn, internal_psl.roll(-1, 1))
-            s22 = (-rc_mul(enn, internal_psl) + rc_mul(epp, internal_psl.roll(-1, 1))).roll(1, 1)
-            s12 = s_mul(1j, (rc_mul(enp, internal_psl) + rc_mul(epn, internal_psl.roll(-1, 1))).roll(1, 1))
-            s21 = s_mul(1j, (rc_mul(epn, internal_psl) + rc_mul(enp, internal_psl.roll(-1, 1))))
+            s11 = rc_mul(self.epp, internal_psl) - rc_mul(self.enn, internal_psl.roll(-1, 1))
+            s22 = (-rc_mul(self.enn, internal_psl) + rc_mul(self.epp, internal_psl.roll(-1, 1))).roll(1, 1)
+            s12 = s_mul(1j, (rc_mul(self.enp, internal_psl) + rc_mul(self.epn, internal_psl.roll(-1, 1))).roll(1, 1))
+            s21 = s_mul(1j, (rc_mul(self.epn, internal_psl) + rc_mul(self.enp, internal_psl.roll(-1, 1))))
 
         diag_layers = cc_mul(external_psl, s11 + s22) / 2
         off_diag_layers = cc_mul(external_psl.roll(1, 1), s21 + s12) / 2
@@ -243,69 +286,6 @@ class MeshTorch:
                                                  off_diag_layers[:, layer], self.perm_layers[layer + 1]))
 
         return mesh_layers
-
-
-class MeshTorchLayer(TransformerLayer):
-    """Mesh network layer for unitary operators implemented in numpy
-
-    Args:
-        mesh_model: The model of the mesh network (e.g., rectangular, triangular, butterfly)
-    """
-
-    def __init__(self, mesh_model: MeshModel, **kwargs):
-        self.mesh = MeshTorch(mesh_model)
-        self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
-        super(MeshTorchLayer, self).__init__(self.units, **kwargs)
-        theta_init, phi_init, gamma_init = self.mesh.model.init()
-        self.theta, self.phi, self.gamma = theta_init.to_torch(), phi_init.to_torch(), gamma_init.to_torch()
-
-    def transform(self, inputs: torch.Tensor) -> torch.Tensor:
-        mesh_phases = MeshPhasesTorch(
-            theta=self.theta,
-            phi=self.phi,
-            mask=self.mesh.model.mask,
-            gamma=self.gamma,
-            hadamard=self.mesh.model.hadamard,
-            units=self.units,
-            basis=self.mesh.model.basis
-        )
-        mesh_layers = self.mesh.mesh_layers(mesh_phases)
-        if isinstance(inputs, np.ndarray):
-            inputs = to_complex_t(inputs, self.theta.device)
-        outputs = cc_mul(inputs, mesh_phases.input_phase_shift_layer)
-        for layer in range(self.num_layers):
-            outputs = mesh_layers[layer].transform(outputs)
-        return outputs
-
-    def inverse_transform(self, outputs: torch.Tensor) -> torch.Tensor:
-        mesh_phases = MeshPhasesTorch(
-            theta=self.theta,
-            phi=self.phi,
-            mask=self.mesh.model.mask,
-            gamma=self.gamma,
-            hadamard=self.mesh.model.hadamard,
-            units=self.units,
-            basis=self.mesh.model.basis
-        )
-        mesh_layers = self.mesh.mesh_layers(mesh_phases)
-        inputs = to_complex_t(outputs, self.theta.device) if isinstance(outputs, np.ndarray) else outputs
-        for layer in reversed(range(self.num_layers)):
-            inputs = mesh_layers[layer].inverse_transform(inputs)
-        inputs = cc_mul(inputs, conj_t(mesh_phases.input_phase_shift_layer))
-        return inputs
-
-    def adjoint_transform(self, inputs: torch.Tensor) -> torch.Tensor:
-        return self.inverse_transform(inputs)
-
-    @property
-    def phases(self) -> MeshPhases:
-        return MeshPhases(
-            theta=self.theta.detach().numpy() * self.mesh.model.mask,
-            phi=self.phi.detach().numpy() * self.mesh.model.mask,
-            mask=self.mesh.model.mask,
-            gamma=self.gamma.detach().numpy()
-        )
-
 
 # temporary helpers until pytorch supports complex numbers...which should be soon!
 # rc_mul is "real * complex" op
