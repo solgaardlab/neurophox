@@ -261,7 +261,8 @@ class MeshNumpyLayer(TransformerNumpyLayer):
     def _setup(self, phases, testing: bool=False):
         self.mesh.model.testing = testing
         if phases is None:
-            self.theta, self.phi, self.gamma = self.mesh.model.init()
+            theta_init, phi_init, gamma_init = self.mesh.model.init()
+            self.theta, self.phi, self.gamma = theta_init.to_np(), phi_init.to_np(), gamma_init.to_np()
         else:
             if self.mesh.num_layers != phases.theta.param.shape[0]:
                 raise ValueError("num_layers must be specified to match input phases.")

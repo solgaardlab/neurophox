@@ -2,10 +2,6 @@ from typing import Optional, Callable, Tuple
 
 import numpy as np
 import tensorflow as tf
-try:
-    import torch
-except ImportError:
-    pass
 from .components import BlochMZI
 from scipy.stats import multivariate_normal
 
@@ -134,64 +130,6 @@ def to_stripe_tensor(tensor: tf.Tensor, units: int):
         return stripe_tensor
 
 
-def to_stripe_torch(tensor: torch.Tensor, units: int):
-    """
-    Convert a tensor of phase shifts of size (`num_layers`, `units`) into striped array
-    for use in general feedforward mesh architectures.
-
-    Args:
-        tensor: tensor
-        units: dimension the tensor acts on (depends on parity)
-
-    Returns:
-        A general mesh stripe tensor arrangement that is of size (`units`, `num_layers`)
-    """
-    num_layers = tensor.shape[0]
-    tensor_t = tensor.t()
-    stripe_tensor = torch.zeros(units, num_layers)
-    if units % 2:
-        stripe_tensor[:-1][::2] = tensor_t
-    else:
-        stripe_tensor[::2] = tensor_t
-    return stripe_tensor
-
-
-def to_rm_checkerboard_torch(tensor_0: torch.Tensor, tensor_1: torch.Tensor):
-    """A general method to convert even/odd (0/1 parity) arrays of values into checkerboard tensors.
-    This is a critical component of rectangular mesh simulations. Note that this method is much simpler than
-    the tensorflow version.
-
-    Args:
-        tensor_0: Nonzero values in the even columns
-        tensor_1: Nonzero values in the odd columns
-
-    Returns:
-        An RD checkerboard tensor arrangement that is of size (`units`, `num_layers`) for an RD mesh
-    """
-    if len(tensor_0.size()) == 2:
-        num_layers = tensor_0.size()[0] + tensor_1.size()[0]
-        units = tensor_0.size()[1] + tensor_1.size()[1] + 1
-        checkerboard = torch.zeros(units - 1, num_layers)
-        checkerboard[::2, ::2] = tensor_0.t()
-        checkerboard[1::2, 1::2] = tensor_1.t()
-        checkerboard = torch.cat([checkerboard, torch.zeros(1, num_layers)], dim=0)
-    else:
-        batch_size = tensor_0.size()[2]
-        num_layers = tensor_0.size()[0] + tensor_1.size()[0]
-        units = tensor_0.size()[1] + tensor_1.size()[1] + 1
-        checkerboard = torch.zeros((units - 1, num_layers, batch_size))
-        checkerboard[::2, ::2] = tensor_0.transpose(0, 1)
-        checkerboard[1::2, 1::2] = tensor_1.transpose(0, 1)
-        checkerboard = torch.cat([checkerboard, torch.zeros(1, num_layers, batch_size)], dim=0)
-    return checkerboard
-
-
-def to_absolute_theta_tf(theta: tf.Tensor) -> tf.Tensor:
-    theta = tf.math.mod(theta, 2 * np.pi)
-    theta = tf.where(tf.greater(theta, np.pi), 2 * np.pi * tf.ones_like(theta) - theta, theta)
-    return theta
-
-
 def to_absolute_theta(theta: np.ndarray) -> np.ndarray:
     theta = np.mod(theta, 2 * np.pi)
     theta[theta > np.pi] = 2 * np.pi - theta[theta > np.pi]
@@ -203,12 +141,6 @@ def roll_tensor(tensor: tf.Tensor, up=False):
     if up:
         return tf.concat([tensor[1:], tensor[tf.newaxis, 0]], axis=0)
     return tf.concat([tensor[tf.newaxis, -1], tensor[:-1]], axis=0)
-
-
-# def roll_torch(x: torch.Tensor, up=False, complex=True):
-#     if up:
-#         return torch.cat([x[1:], x[:1]], dim=0)
-#     return torch.cat((x[-1:], x[:-1]), dim=0)
 
 
 def get_mesh_boundary_correction(units: int, num_layers: int, use_np: bool=False):

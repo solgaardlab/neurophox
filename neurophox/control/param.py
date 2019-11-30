@@ -2,13 +2,13 @@ import numpy as np
 
 try:
     import torch
+    from ..torch.helpers import to_stripe_torch
 except ImportError:
     pass
 
 import tensorflow as tf
 
-from ..helpers import roll_tensor, to_stripe_array, to_stripe_tensor,\
-    to_stripe_torch, to_rm_checkerboard
+from ..helpers import roll_tensor, to_stripe_array, to_stripe_tensor, to_rm_checkerboard
 
 
 class MeshParam:
@@ -187,38 +187,3 @@ class MeshParamTensorflow:
 
     def __mul__(self, other):
         return MeshParamTensorflow(self.param * other.param, self.units)
-
-
-class MeshParamTorch:
-    """A class that cleanly arranges parameters into a specific arrangement that can be used to simulate any mesh
-
-    Args:
-        param: parameter to arrange in mesh
-        units: number of inputs/outputs of the mesh
-    """
-    def __init__(self, param: torch.Tensor, units: int):
-        self.param = param
-        self.units = units
-
-    @property
-    def single_mode_arrangement(self):
-        return to_stripe_torch(self.param, self.units)
-
-    @property
-    def common_mode_arrangement(self) -> tf.Tensor:
-        phases = self.single_mode_arrangement
-        return phases + phases.roll(1, 0)
-
-    @property
-    def differential_mode_arrangement(self) -> tf.Tensor:
-        phases = self.single_mode_arrangement
-        return phases / 2 - phases.roll(1, 0) / 2
-
-    def __add__(self, other):
-        return MeshParamTorch(self.param + other.param, self.units)
-
-    def __sub__(self, other):
-        return MeshParamTorch(self.param - other.param, self.units)
-
-    def __mul__(self, other):
-        return MeshParamTorch(self.param * other.param, self.units)

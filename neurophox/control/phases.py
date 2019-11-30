@@ -2,12 +2,12 @@ import numpy as np
 import tensorflow as tf
 try:
     import torch
-    from torch.nn import Parameter
+
 except ImportError:
     pass
 
 from ..config import BLOCH, SINGLEMODE
-from .param import MeshParam, MeshParamTensorflow, MeshParamTorch
+from .param import MeshParam, MeshParamTensorflow
 
 
 class MeshPhases:
@@ -178,41 +178,3 @@ class MeshPhasesTensorflow:
         external_ps = self.external_phase_shifts
         return tf.complex(tf.cos(external_ps), tf.sin(external_ps))
 
-
-class MeshPhasesTorch:
-    def __init__(self, theta: Parameter, phi: Parameter, mask: np.ndarray, gamma: Parameter, units: int,
-                 basis: str = SINGLEMODE, hadamard: bool = False):
-        self.mask = mask if mask is not None else np.ones_like(theta)
-        self.theta = MeshParamTorch(theta * torch.as_tensor(mask) + torch.as_tensor(1 - mask) * (1 - hadamard) * np.pi, units=units)
-        self.phi = MeshParamTorch(phi * torch.as_tensor(mask) + torch.as_tensor(1 - mask) * (1 - hadamard) * np.pi, units=units)
-        self.gamma = gamma
-        self.basis = basis
-        self.input_phase_shift_layer = torch.stack((torch.cos(gamma), torch.sin(gamma)), dim=0)
-        if self.theta.param.shape != self.phi.param.shape:
-            raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
-
-    @property
-    def internal_phase_shifts(self):
-        if self.basis == BLOCH:
-            return self.theta.differential_mode_arrangement
-        elif self.basis == SINGLEMODE:
-            return self.theta.single_mode_arrangement
-        else:
-            raise NotImplementedError(f"{self.basis} is not yet supported or invalid.")
-
-    @property
-    def external_phase_shifts(self):
-        if self.basis == BLOCH or self.basis == SINGLEMODE:
-            return self.phi.single_mode_arrangement
-        else:
-            raise NotImplementedError(f"{self.basis} is not yet supported or invalid.")
-
-    @property
-    def internal_phase_shift_layers(self):
-        internal_ps = self.internal_phase_shifts
-        return torch.stack((internal_ps.cos(), internal_ps.sin()), dim=0)
-
-    @property
-    def external_phase_shift_layers(self):
-        external_ps = self.external_phase_shifts
-        return torch.stack((external_ps.cos(), external_ps.sin()), dim=0)

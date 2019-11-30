@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 project_name = "neurophox"
 
 requirements = [
-    "numpy",
+    "numpy>=1.16",
     "scipy",
     "tensorflow>=2.0.0a"
 ]

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 
 try:
     import torch
@@ -9,7 +9,7 @@ except ImportError:
 import numpy as np
 
 from ..config import PYTORCH
-from ..control import MeshPhasesTorch
+from .helpers import MeshPhasesTorch
 from ..meshmodel import MeshModel
 from ..helpers import pairwise_off_diag_permutation, plot_complex_matrix
 
@@ -123,7 +123,9 @@ class MeshTorch:
         self.model = model
         self.units, self.num_layers = self.model.units, self.model.num_layers
         self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
-        self.enn, self.enp, self.epn, self.epp = self.model.mzi_error_tensors_t
+        enn, enp, epn, epp = self.model.mzi_error_tensors
+        self.enn, self.enp, self.epn, self.epp = torch.as_tensor(enn), torch.as_tensor(enp),\
+                                                 torch.as_tensor(epn), torch.as_tensor(epp)
         self.perm_layers = [PermutationLayer(self.model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
     def mesh_layers(self, phases: MeshPhasesTorch) -> List[MeshVerticalLayer]:
@@ -171,7 +173,8 @@ class MeshTorchLayer(TransformerLayer):
         self.mesh = MeshTorch(mesh_model)
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
         super(MeshTorchLayer, self).__init__(self.units, **kwargs)
-        self.theta, self.phi, self.gamma = self.mesh.model.init(backend=PYTORCH)
+        theta_init, phi_init, gamma_init = self.mesh.model.init()
+        self.theta, self.phi, self.gamma = theta_init.to_torch(), phi_init.to_torch(), gamma_init.to_torch()
 
     def transform(self, inputs: torch.Tensor) -> torch.Tensor:
         mesh_phases = MeshPhasesTorch(

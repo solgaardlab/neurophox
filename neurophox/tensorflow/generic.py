@@ -7,7 +7,7 @@ import numpy as np
 from ..control import MeshPhases, MeshPhasesTensorflow
 from ..meshmodel import MeshModel
 from ..helpers import pairwise_off_diag_permutation, roll_tensor, plot_complex_matrix, inverse_permutation
-from ..config import TFKERAS
+from ..config import TFKERAS, TF_COMPLEX
 
 
 class TransformerLayer(Layer):
@@ -257,7 +257,9 @@ class Mesh:
         self.model = model
         self.units, self.num_layers = self.model.units, self.model.num_layers
         self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
-        self.enn, self.enp, self.epn, self.epp = self.model.mzi_error_tensors_tf
+        enn, enp, epn, epp = self.model.mzi_error_tensors
+        self.enn, self.enp, self.epn, self.epp = tf.constant(enn, dtype=TF_COMPLEX), tf.constant(enp, dtype=TF_COMPLEX),\
+                                                 tf.constant(epn, dtype=TF_COMPLEX), tf.constant(epp, dtype=TF_COMPLEX)
         self.perm_layers = [PermutationLayer(self.model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
     def mesh_layers(self, phases: MeshPhasesTensorflow) -> List[MeshVerticalLayer]:
@@ -314,7 +316,8 @@ class MeshLayer(TransformerLayer):
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
         self.include_diagonal_phases = include_diagonal_phases
         super(MeshLayer, self).__init__(self.units, activation=activation, **kwargs)
-        self.theta, self.phi, self.gamma = self.mesh.model.init(backend=TFKERAS)
+        theta_init, phi_init, gamma_init = self.mesh.model.init()
+        self.theta, self.phi, self.gamma = theta_init.to_tf("theta"), phi_init.to_tf("phi"), gamma_init.to_tf("gamma")
 
     @tf.function
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:

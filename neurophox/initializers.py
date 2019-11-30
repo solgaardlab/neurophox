@@ -1,13 +1,17 @@
 from typing import Tuple, Union, Optional
 
 import tensorflow as tf
-import torch
-from torch.nn.parameter import Parameter
+
+try:
+    import torch
+    from torch.nn import Parameter
+except ImportError:
+    pass
 
 import numpy as np
 
 from .config import TF_FLOAT, NP_FLOAT, TEST_SEED
-from .helpers import get_alpha_checkerboard_general, get_default_coarse_grain_block_sizes,\
+from .helpers import get_alpha_checkerboard_general, get_default_coarse_grain_block_sizes, \
     get_efficient_coarse_grain_block_sizes
 from scipy.special import betaincinv
 
@@ -43,14 +47,14 @@ class MeshPhaseInitializer:
             dtype=TF_FLOAT
         )
 
-    def to_torch(self, is_trainable: bool=True) -> Parameter:
+    def to_torch(self, is_trainable: bool = True):
         """
 
         Returns:
             Initialized torch Parameter
         """
         phase_initializer = self.to_np()
-        phase = Parameter(torch.tensor(phase_initializer, requires_grad=is_trainable))
+        phase = Parameter(torch.tensor(phase_initializer), requires_grad=is_trainable)
         return phase
 
 
@@ -64,7 +68,8 @@ class HaarRandomPhaseInitializer(MeshPhaseInitializer):
         hadamard: Whether to use Hadamard convention
         tri: Initializer for the triangular mesh architecture
     """
-    def __init__(self, units: int, num_layers: int=None, hadamard: bool=False, tri: bool=False):
+
+    def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, tri: bool = False):
         self.tri = tri
         if self.tri:
             self.num_layers = 2 * units - 3
@@ -85,7 +90,7 @@ class HaarRandomPhaseInitializer(MeshPhaseInitializer):
 
 
 class PRMPhaseInitializer(MeshPhaseInitializer):
-    def __init__(self, units: int, hadamard: bool, tunable_layers_per_block: Optional[int]=None):
+    def __init__(self, units: int, hadamard: bool, tunable_layers_per_block: Optional[int] = None):
         """
         A useful initialization of permuting mesh architectures based on the Haar random initialization above.
         This currently only works if using default permuting mesh architecture or setting :math:`tunable_layers_per_block`.
@@ -116,7 +121,7 @@ class PRMPhaseInitializer(MeshPhaseInitializer):
 
 
 class UniformRandomPhaseInitializer(MeshPhaseInitializer):
-    def __init__(self, units: int, num_layers: int, max_phase, min_phase: float=0):
+    def __init__(self, units: int, num_layers: int, max_phase, min_phase: float = 0):
         """
         Defines a uniform random initializer up to some maximum phase,
         e.g. :math:`\\theta \in [0, \pi]` or :math:`\phi \in [0, 2\pi)`.
@@ -155,9 +160,9 @@ class ConstantPhaseInitializer(MeshPhaseInitializer):
 
 
 def get_haar_theta(units: int, num_layers: int, hadamard: bool,
-                   tri: bool=False) -> Union[Tuple[np.ndarray, np.ndarray],
-                                             Tuple[tf.Variable, tf.Variable],
-                                             tf.Variable]:
+                   tri: bool = False) -> Union[Tuple[np.ndarray, np.ndarray],
+                                               Tuple[tf.Variable, tf.Variable],
+                                               tf.Variable]:
     if tri:
         alpha_rows = np.repeat(np.linspace(1, units - 1, units - 1)[:, np.newaxis], units * 2 - 3, axis=1).T
         theta_0_root = 2 * alpha_rows[::2, ::2]
@@ -190,7 +195,7 @@ def get_ortho_haar_theta(units: int, num_layers: int,
 
 
 def get_initializer(units: int, num_layers: int, initializer_name: str,
-                    hadamard: bool=False, testing: bool=False) -> MeshPhaseInitializer:
+                    hadamard: bool = False, testing: bool = False) -> MeshPhaseInitializer:
     if testing:
         np.random.seed(TEST_SEED)
     initializer_name_to_initializer = {

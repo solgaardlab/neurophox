@@ -1,5 +1,4 @@
-numpy>=1.14
+numpy>=1.16
 scipy
-matplotlib
 tensorflow>=2.0.0a0
 torch>=1.3
