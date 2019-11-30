@@ -4,10 +4,10 @@ import tensorflow as tf
 from tensorflow.keras.layers import Layer, Activation
 import numpy as np
 
-from ..control import MeshPhases, MeshPhasesTensorflow
+from ..numpy.generic import MeshPhases
 from ..meshmodel import MeshModel
-from ..helpers import pairwise_off_diag_permutation, roll_tensor, plot_complex_matrix, inverse_permutation
-from ..config import TFKERAS, TF_COMPLEX
+from ..helpers import pairwise_off_diag_permutation, plot_complex_matrix, inverse_permutation
+from ..config import TF_COMPLEX, BLOCH, SINGLEMODE
 
 
 class TransformerLayer(Layer):
@@ -246,6 +246,170 @@ class MeshVerticalLayer(TransformerLayer):
         return inputs if self.left_perm is None else self.left_perm.inverse_transform(inputs)
 
 
+class MeshParamTensorflow:
+    """A class that cleanly arranges parameters into a specific arrangement that can be used to simulate any mesh
+
+    Args:
+        param: parameter to arrange in mesh
+        units: number of inputs/outputs of the mesh
+    """
+    def __init__(self, param: tf.Tensor, units: int):
+        self.param = param
+        self.units = units
+
+    @property
+    def single_mode_arrangement(self):
+        """
+        The single-mode arrangement based on the :math:`L(\\theta)` transfer matrix for :code:`PhaseShiftUpper`
+        is one where elements of `param` are on the even rows and all odd rows are zero.
+
+        In particular, given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
+        where :math:`\\boldsymbol{\\theta}_m` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the single-mode arrangement has the stripe array form
+        :math:`\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{0}, \\boldsymbol{\\theta}_2, \\boldsymbol{0}, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{0}]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\boldsymbol{\\theta}` of the final mesh
+        and :math:`\\boldsymbol{0}` represents an array of zeros of the same size as :math:`\\boldsymbol{\\theta}_n`.
+
+        Returns:
+            Single-mode arrangement array of phases
+
+        """
+        tensor_t = tf.transpose(self.param)
+        stripe_tensor = tf.reshape(tf.concat((tensor_t, tf.zeros_like(tensor_t)), 1),
+                                   shape=(tensor_t.shape[0] * 2, tensor_t.shape[1]))
+        if self.units % 2:
+            return tf.concat([stripe_tensor, tf.zeros(shape=(1, tensor_t.shape[1]))], axis=0)
+        else:
+            return stripe_tensor
+
+    @property
+    def common_mode_arrangement(self) -> tf.Tensor:
+        """
+        The common-mode arrangement based on the :math:`C(\\theta)` transfer matrix for :code:`PhaseShiftCommonMode`
+        is one where elements of `param` are on the even rows and repeated on respective odd rows.
+
+        In particular, given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the common-mode arrangement has the stripe array form
+        :math:`\\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{\\theta}_N]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\boldsymbol{\\theta}` of the final mesh.
+
+
+        Returns:
+            Common-mode arrangement array of phases
+
+        """
+        phases = self.single_mode_arrangement
+        return phases + roll_tensor(phases)
+
+    @property
+    def differential_mode_arrangement(self) -> tf.Tensor:
+        """
+        The differential-mode arrangement is based on the :math:`D(\\theta)` transfer matrix
+        for :code:`PhaseShiftDifferentialMode`.
+
+        Given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\cdots \\boldsymbol{\\theta}_m \cdots]^T`,
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the differential-mode arrangement has the form
+        :math:`\\widetilde{\\boldsymbol{\\theta}} = \\left[\cdots \\frac{\\boldsymbol{\\theta}_m}{2}, -\\frac{\\boldsymbol{\\theta}_m}{2} \cdots \\right]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\boldsymbol{\\theta}` of the final mesh.
+
+        Returns:
+            Differential-mode arrangement array of phases
+
+        """
+        phases = self.single_mode_arrangement
+        return phases / 2 - roll_tensor(phases / 2)
+
+    def __add__(self, other):
+        return MeshParamTensorflow(self.param + other.param, self.units)
+
+    def __sub__(self, other):
+        return MeshParamTensorflow(self.param - other.param, self.units)
+
+    def __mul__(self, other):
+        return MeshParamTensorflow(self.param * other.param, self.units)
+
+
+class MeshPhasesTensorflow:
+    """Organizes the phases in the mesh into appropriate arrangements
+
+    Args:
+        theta: Array to be converted to :math:`\\boldsymbol{\\theta}`
+        phi: Array to be converted to :math:`\\boldsymbol{\\phi}`
+        gamma: Array to be converted to :math:`\\boldsymbol{\gamma}`
+        mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
+        basis: Phase basis to use
+        hadamard: Whether to use Hadamard convention
+    """
+    def __init__(self, theta: tf.Variable, phi: tf.Variable, mask: np.ndarray, gamma: tf.Variable, units: int,
+                 basis: str = SINGLEMODE, hadamard: bool = False):
+        self.mask = mask if mask is not None else np.ones_like(theta)
+        self.theta = MeshParamTensorflow(theta * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
+        self.phi = MeshParamTensorflow(phi * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
+        self.gamma = gamma
+        self.basis = basis
+        self.input_phase_shift_layer = tf.complex(tf.cos(gamma), tf.sin(gamma))
+        if self.theta.param.shape != self.phi.param.shape:
+            raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
+
+    @property
+    def internal_phase_shifts(self):
+        """
+
+        The internal phase shift matrix of the mesh corresponds to an `L \\times N` array of phase shifts
+        (in between beamsplitters, thus internal) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
+
+        Returns:
+            Internal phase shift matrix corresponding to :math:`\\boldsymbol{\\theta}`
+        """
+        if self.basis == BLOCH:
+            return self.theta.differential_mode_arrangement
+        elif self.basis == SINGLEMODE:
+            return self.theta.single_mode_arrangement
+        else:
+            raise NotImplementedError(f"{self.basis} is not yet supported or invalid.")
+
+    @property
+    def external_phase_shifts(self):
+        """
+
+        The external phase shift matrix of the mesh corresponds to an `L \\times N` array of phase shifts
+        (outside of beamsplitters, thus external) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
+
+        Returns:
+            External phase shift matrix corresponding to :math:`\\boldsymbol{\\phi}`
+        """
+        if self.basis == BLOCH or self.basis == SINGLEMODE:
+            return self.phi.single_mode_arrangement
+        else:
+            raise NotImplementedError(f"{self.basis} is not yet supported or invalid.")
+
+    @property
+    def internal_phase_shift_layers(self):
+        """
+
+        Elementwise applying complex exponential to :code:`internal_phase_shifts`.
+
+        Returns:
+            Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
+        """
+        internal_ps = self.internal_phase_shifts
+        return tf.complex(tf.cos(internal_ps), tf.sin(internal_ps))
+
+    @property
+    def external_phase_shift_layers(self):
+        """
+
+        Elementwise applying complex exponential to :code:`external_phase_shifts`.
+
+        Returns:
+            External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
+        """
+        external_ps = self.external_phase_shifts
+        return tf.complex(tf.cos(external_ps), tf.sin(external_ps))
+
+
 class Mesh:
     def __init__(self, model: MeshModel):
         """
@@ -397,3 +561,10 @@ class MeshLayer(TransformerLayer):
             mask=self.mesh.model.mask,
             gamma=self.gamma.numpy()
         )
+
+
+def roll_tensor(tensor: tf.Tensor, up=False):
+    # a complex number-friendly roll that works on gpu
+    if up:
+        return tf.concat([tensor[1:], tensor[tf.newaxis, 0]], axis=0)
+    return tf.concat([tensor[tf.newaxis, -1], tensor[:-1]], axis=0)

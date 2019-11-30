@@ -2,14 +2,14 @@ from typing import List
 
 try:
     import torch
-    from torch.nn import Module
+    from torch.nn import Module, Parameter
 except ImportError:
     pass
 
 import numpy as np
 
-from ..config import PYTORCH
-from .helpers import MeshPhasesTorch
+from ..numpy.generic import MeshPhases
+from ..config import BLOCH, SINGLEMODE
 from ..meshmodel import MeshModel
 from ..helpers import pairwise_off_diag_permutation, plot_complex_matrix
 
@@ -112,6 +112,90 @@ class MeshVerticalLayer(TransformerLayer):
         return inputs
 
 
+class MeshParamTorch:
+    """A class that cleanly arranges parameters into a specific arrangement that can be used to simulate any mesh
+
+    Args:
+        param: parameter to arrange in mesh
+        units: number of inputs/outputs of the mesh
+    """
+
+    def __init__(self, param: torch.Tensor, units: int):
+        self.param = param
+        self.units = units
+
+    @property
+    def single_mode_arrangement(self) -> torch.Tensor:
+        num_layers = self.param.shape[0]
+        tensor_t = self.param.t()
+        stripe_tensor = torch.zeros(self.units, num_layers)
+        if self.units % 2:
+            stripe_tensor[:-1][::2] = tensor_t
+        else:
+            stripe_tensor[::2] = tensor_t
+        return stripe_tensor
+
+    @property
+    def common_mode_arrangement(self) -> torch.Tensor:
+        phases = self.single_mode_arrangement
+        return phases + phases.roll(1, 0)
+
+    @property
+    def differential_mode_arrangement(self) -> torch.Tensor:
+        phases = self.single_mode_arrangement
+        return phases / 2 - phases.roll(1, 0) / 2
+
+    def __add__(self, other):
+        return MeshParamTorch(self.param + other.param, self.units)
+
+    def __sub__(self, other):
+        return MeshParamTorch(self.param - other.param, self.units)
+
+    def __mul__(self, other):
+        return MeshParamTorch(self.param * other.param, self.units)
+
+
+class MeshPhasesTorch:
+    def __init__(self, theta: Parameter, phi: Parameter, mask: np.ndarray, gamma: Parameter, units: int,
+                 basis: str = SINGLEMODE, hadamard: bool = False):
+        self.mask = mask if mask is not None else np.ones_like(theta)
+        self.theta = MeshParamTorch(theta * torch.as_tensor(mask) + torch.as_tensor(1 - mask) * (1 - hadamard) * np.pi,
+                                    units=units)
+        self.phi = MeshParamTorch(phi * torch.as_tensor(mask) + torch.as_tensor(1 - mask) * (1 - hadamard) * np.pi,
+                                  units=units)
+        self.gamma = gamma
+        self.basis = basis
+        self.input_phase_shift_layer = torch.stack((torch.cos(gamma), torch.sin(gamma)), dim=0)
+        if self.theta.param.shape != self.phi.param.shape:
+            raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
+
+    @property
+    def internal_phase_shifts(self):
+        if self.basis == BLOCH:
+            return self.theta.differential_mode_arrangement
+        elif self.basis == SINGLEMODE:
+            return self.theta.single_mode_arrangement
+        else:
+            raise NotImplementedError(f"{self.basis} is not yet supported or invalid.")
+
+    @property
+    def external_phase_shifts(self):
+        if self.basis == BLOCH or self.basis == SINGLEMODE:
+            return self.phi.single_mode_arrangement
+        else:
+            raise NotImplementedError(f"{self.basis} is not yet supported or invalid.")
+
+    @property
+    def internal_phase_shift_layers(self):
+        internal_ps = self.internal_phase_shifts
+        return torch.stack((internal_ps.cos(), internal_ps.sin()), dim=0)
+
+    @property
+    def external_phase_shift_layers(self):
+        external_ps = self.external_phase_shifts
+        return torch.stack((external_ps.cos(), external_ps.sin()), dim=0)
+
+
 class MeshTorch:
     def __init__(self, model: MeshModel):
         """
@@ -124,7 +208,7 @@ class MeshTorch:
         self.units, self.num_layers = self.model.units, self.model.num_layers
         self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
         enn, enp, epn, epp = self.model.mzi_error_tensors
-        self.enn, self.enp, self.epn, self.epp = torch.as_tensor(enn), torch.as_tensor(enp),\
+        self.enn, self.enp, self.epn, self.epp = torch.as_tensor(enn), torch.as_tensor(enp), \
                                                  torch.as_tensor(epn), torch.as_tensor(epp)
         self.perm_layers = [PermutationLayer(self.model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
@@ -215,14 +299,14 @@ class MeshTorchLayer(TransformerLayer):
         return self.inverse_transform(inputs)
 
     @property
-    def phases(self) -> MeshPhasesTorch:
-        return MeshPhasesTorch(
-            theta=self.theta.numpy() * self.mesh.model.mask,
-            phi=self.phi.numpy() * self.mesh.model.mask,
+    def phases(self) -> MeshPhases:
+        return MeshPhases(
+            theta=self.theta.detach().numpy() * self.mesh.model.mask,
+            phi=self.phi.detach().numpy() * self.mesh.model.mask,
             mask=self.mesh.model.mask,
-            gamma=self.gamma.numpy(),
-            units=self.units
+            gamma=self.gamma.detach().numpy()
         )
+
 
 # temporary helpers until pytorch supports complex numbers...which should be soon!
 # rc_mul is "real * complex" op

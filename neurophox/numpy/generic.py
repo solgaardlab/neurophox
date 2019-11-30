@@ -1,10 +1,9 @@
 from typing import List, Optional
 
 import numpy as np
-from ..helpers import plot_complex_matrix, inverse_permutation, ordered_viz_permutation
+from ..helpers import plot_complex_matrix, inverse_permutation, ordered_viz_permutation, to_stripe_array
 from ..components import MZI, Beamsplitter
-from ..control import MeshPhases
-from ..config import NP_COMPLEX
+from ..config import NP_COMPLEX, BLOCH, SINGLEMODE
 from ..meshmodel import MeshModel
 
 
@@ -164,6 +163,201 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
             return inputs
         else:
             return inputs.take(inverse_permutation(self.left_perm_idx), axis=-1)
+
+
+class MeshParam:
+    """A class that arranges parameters to simulate any feedforward mesh
+
+    Args:
+        param: parameter to arrange in mesh
+        units: number of inputs/outputs of the mesh
+    """
+    def __init__(self, param: np.ndarray, units: int):
+        self.param = param
+        self.units = units
+
+    @property
+    def single_mode_arrangement(self) -> np.ndarray:
+        """
+        The single-mode arrangement based on the :math:`L(\\theta)` transfer matrix for :code:`PhaseShiftUpper`
+        is one where elements of `param` are on the even rows and all odd rows are zero.
+
+        In particular, given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
+        where :math:`\\boldsymbol{\\theta}_m` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the single-mode arrangement has the stripe array form
+        :math:`\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{0}, \\boldsymbol{\\theta}_2, \\boldsymbol{0}, \ldots \\boldsymbol{\\theta}_M, \\boldsymbol{0}]^T`
+        where :math:`\widetilde{\\boldsymbol{\\theta}}` defines the spatial arrangement of mesh phases
+        and :math:`\\boldsymbol{0}` represents an array of zeros of the same size as :math:`\\boldsymbol{\\theta}_m`.
+
+        Returns:
+            Single-mode arrangement array of phases
+
+        """
+        return to_stripe_array(self.param, self.units)
+
+    @property
+    def checkerboard_arrangement(self) -> np.ndarray:
+        """
+
+        Returns:
+            Checkerboard arrangement of phases useful for grid mesh structures (e.g. rectangular and triangular meshes)
+        """
+        checkerboard = np.zeros((self.units, self.param.shape[0]), dtype=self.param.dtype)
+        if self.units % 2:
+            checkerboard[:-1][::2, ::2] = self.param[::2].T
+        else:
+            checkerboard[::2, ::2] = self.param[::2].T
+        checkerboard[1::2, 1::2] = self.param[1::2].T
+        return checkerboard
+
+    @property
+    def common_mode_arrangement(self) -> np.ndarray:
+        """
+        The common-mode arrangement based on the :math:`C(\\theta)` transfer matrix for :code:`PhaseShiftCommonMode`
+        is one where elements of `param` are on the even rows and repeated on respective odd rows.
+
+        In particular, given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the common-mode arrangement has the stripe array form
+        :math:`\\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M, \\boldsymbol{\\theta}_M]^T`
+        where :math:`\widetilde{\\boldsymbol{\\theta}}` defines the spatial arrangement of mesh phases.
+
+
+        Returns:
+            Common-mode arrangement array of phases
+
+        """
+        phases = self.single_mode_arrangement
+        return phases + np.roll(phases, 1, axis=0)
+
+    @property
+    def differential_mode_arrangement(self) -> np.ndarray:
+        """
+        The differential-mode arrangement is based on the :math:`D(\\theta)` transfer matrix
+        for :code:`PhaseShiftDifferentialMode`.
+
+        Given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\cdots \\boldsymbol{\\theta}_m \cdots]^T`,
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the differential-mode arrangement has the form
+        :math:`\\widetilde{\\boldsymbol{\\theta}} = \\left[\cdots \\frac{\\boldsymbol{\\theta}_m}{2}, -\\frac{\\boldsymbol{\\theta}_m}{2} \cdots \\right]^T`
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the spatial arrangement of mesh phases.
+
+        Returns:
+            Differential-mode arrangement array of phases
+
+        """
+        phases = self.single_mode_arrangement
+        return phases / 2 - np.roll(phases / 2, 1, axis=0)
+
+    def param_list(self, mask: np.ndarray) -> np.ndarray:
+        """
+
+        Args:
+            mask: Mask to ignore params in output
+
+        Returns:
+            A flattened array of unmasked params in :code:`param`
+        """
+        return self.param[mask.astype(np.bool)]
+
+    def __add__(self, other):
+        return MeshParam(self.param + other.param, self.units)
+
+    def __sub__(self, other):
+        return MeshParam(self.param - other.param, self.units)
+
+    def __mul__(self, other):
+        return MeshParam(self.param * other.param, self.units)
+
+
+class MeshPhases:
+    """Arranges the phases in the mesh appropriately depending on :code:`basis` using the :code:`MeshParam` class.
+
+    Args:
+        theta: Array to be converted to :math:`\\boldsymbol{\\theta}`
+        phi: Array to be converted to :math:`\\boldsymbol{\\phi}`
+        gamma: Array to be converted to :math:`\\boldsymbol{\gamma}`
+        mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
+        basis: Phase basis to use
+        hadamard: Whether to use Hadamard convention
+    """
+    def __init__(self, theta: np.ndarray, phi: np.ndarray, gamma: np.ndarray, mask: np.ndarray=None,
+                 basis: str = BLOCH, hadamard: bool = False):
+        self.mask = mask if mask is not None else np.ones_like(theta)
+        self.theta = MeshParam(theta * self.mask + (1 - self.mask) * (1 - hadamard) * np.pi, gamma.size)
+        self.phi = MeshParam(phi * self.mask + (1 - self.mask) * (1 - hadamard) * np.pi, gamma.size)
+        self.gamma = gamma
+        self.hadamard = hadamard
+        self.basis = basis
+        self.input_phase_shift_layer = np.exp(1j * gamma)
+        if self.theta.param.shape != self.phi.param.shape:
+            raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
+
+    @property
+    def internal_phase_shifts(self):
+        """
+
+        The internal phase shift matrix of the mesh corresponds to an `L \\times N` array of phase shifts
+        (in between beamsplitters, thus internal) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
+
+        Returns:
+            Internal phase shift matrix corresponding to :math:`\\boldsymbol{\\theta}`
+        """
+        if self.basis == BLOCH:
+            return self.theta.differential_mode_arrangement
+        elif self.basis == SINGLEMODE:
+            return self.theta.single_mode_arrangement
+        else:
+            raise NotImplementedError(f"{self.basis} is not yet supported or invalid.")
+
+    @property
+    def external_phase_shifts(self):
+        """
+
+        The external phase shift matrix of the mesh corresponds to an `L \\times N` array of phase shifts
+        (outside of beamsplitters, thus external) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
+
+        Returns:
+            External phase shift matrix corresponding to :math:`\\boldsymbol{\\phi}`
+        """
+        if self.basis == BLOCH or self.basis == SINGLEMODE:
+            return self.phi.single_mode_arrangement
+        else:
+            raise NotImplementedError(f"{self.basis} is not yet supported or invalid.")
+
+    @property
+    def internal_phase_shift_layers(self):
+        """
+
+        Elementwise applying complex exponential to :code:`internal_phase_shifts`.
+
+        Returns:
+            Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
+        """
+        return np.exp(1j * self.internal_phase_shifts)
+
+    @property
+    def external_phase_shift_layers(self):
+        """
+
+        Elementwise applying complex exponential to :code:`external_phase_shifts`.
+
+        Returns:
+            External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
+        """
+        return np.exp(1j * self.external_phase_shifts)
+
+    def __add__(self, other_rm_mesh_phases):
+        return MeshPhases(self.theta.param + other_rm_mesh_phases.theta.param,
+                          self.phi.param + other_rm_mesh_phases.phi.param,
+                          self.mask,
+                          self.gamma + other_rm_mesh_phases.gamma)
+
+    def __sub__(self, other_rm_mesh_phases):
+        return MeshPhases(self.theta.param - other_rm_mesh_phases.theta.param,
+                          self.phi.param - other_rm_mesh_phases.phi.param,
+                          self.mask,
+                          self.gamma - other_rm_mesh_phases.gamma)
 
 
 class MeshNumpy:

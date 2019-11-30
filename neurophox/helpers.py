@@ -1,11 +1,10 @@
 from typing import Optional, Callable, Tuple
 
 import numpy as np
-import tensorflow as tf
 from .components import BlochMZI
 from scipy.stats import multivariate_normal
 
-from .config import NP_FLOAT, TF_FLOAT
+from .config import NP_FLOAT
 
 
 def clements_decomposition(unitary: np.ndarray, hadamard: bool=False,
@@ -61,27 +60,6 @@ def clements_decomposition(unitary: np.ndarray, hadamard: bool=False,
     return theta_checkerboard, phi_checkerboard, np.diag(unitary_hat)  # not quite the same as the model in MeshPhases
 
 
-def to_rm_checkerboard(nparray: np.ndarray, units: int):
-    """A general method to convert mesh phase params into a checkerboard (useful for plotting).
-    This is a critical component for visualizing rectangular mesh simulations.
-
-    Args:
-        nparray: array of to arrange in checkerboard patterned array
-        units: Dimension of the vector
-
-    Returns:
-        An RM checkerboard tensor arrangement that is of size (`units`, `num_layers`) for an RD mesh
-    """
-    num_layers = nparray.shape[0]
-    checkerboard = np.zeros((units, num_layers), dtype=nparray.dtype)
-    if units % 2:
-        checkerboard[:-1][::2, ::2] = nparray[::2].T
-    else:
-        checkerboard[::2, ::2] = nparray[::2].T
-    checkerboard[1::2, 1::2] = nparray[1::2].T
-    return checkerboard
-
-
 def to_stripe_array(nparray: np.ndarray, units: int):
     """
     Convert a numpy array of phase shifts of size (`num_layers`, `units`)
@@ -109,48 +87,10 @@ def to_stripe_array(nparray: np.ndarray, units: int):
     return stripe_array
 
 
-def to_stripe_tensor(tensor: tf.Tensor, units: int):
-    """
-    Convert a tensor of phase shifts of size (`num_layers`, `units`) into striped array
-    for use in general feedforward mesh architectures.
-
-    Args:
-        tensor: tensor
-        units: dimension the tensor acts on (depends on parity)
-
-    Returns:
-        A general mesh stripe tensor arrangement that is of size (`units`, `num_layers`)
-    """
-    tensor_t = tf.transpose(tensor)
-    stripe_tensor = tf.reshape(tf.concat((tensor_t, tf.zeros_like(tensor_t)), 1),
-                               shape=(tensor_t.shape[0] * 2, tensor_t.shape[1]))
-    if units % 2:
-        return tf.concat([stripe_tensor, tf.zeros(shape=(1, tensor_t.shape[1]))], axis=0)
-    else:
-        return stripe_tensor
-
-
 def to_absolute_theta(theta: np.ndarray) -> np.ndarray:
     theta = np.mod(theta, 2 * np.pi)
     theta[theta > np.pi] = 2 * np.pi - theta[theta > np.pi]
     return theta
-
-
-def roll_tensor(tensor: tf.Tensor, up=False):
-    # a complex number-friendly roll that works on gpu
-    if up:
-        return tf.concat([tensor[1:], tensor[tf.newaxis, 0]], axis=0)
-    return tf.concat([tensor[tf.newaxis, -1], tensor[:-1]], axis=0)
-
-
-def get_mesh_boundary_correction(units: int, num_layers: int, use_np: bool=False):
-    correction = np.zeros((units, num_layers))
-    correction[0, 1::2] = 1
-    correction[-1, (1 - units % 2)::2] = 1
-    if use_np:
-        return correction.astype(NP_FLOAT)
-    else:
-        return tf.constant(correction, dtype=TF_FLOAT)
 
 
 def get_haar_diagonal_sequence(diagonal_length, parity_odd: bool=False):

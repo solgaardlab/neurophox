@@ -2,11 +2,10 @@ import numpy as np
 from typing import Optional, List
 
 
-from .generic import MeshNumpyLayer
-from ..control import MeshPhases
+from .generic import MeshNumpyLayer, MeshPhases
 from ..config import DEFAULT_BASIS
 from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel, ButterflyMeshModel
-from ..helpers import grid_viz_permutation, grid_permutation
+from ..helpers import grid_viz_permutation
 
 
 class RMNumpy(MeshNumpyLayer):
