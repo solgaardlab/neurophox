@@ -43,18 +43,19 @@ Some important requirements for ``neurophox`` are:
 
 
 #. Python >=3.6
-#. Tensorflow 2.0
-#. PyTorch 1.1
+#. Tensorflow >=2.0
+#. PyTorch >=1.3
 
 The dependencies for ``neurophox`` (specified in ``requirements.txt``\ ) are:
 
 .. code-block:: text
 
-   numpy
+   numpy>=1.16
    scipy
    matplotlib
-   tensorflow==2.0
-   torch==1.1
+   tensorflow>=2.0.0a
+
+The user may also optionally install ``torch>=1.3`` to run the ``neurophox.torch`` module.
 
 Getting started
 ---------------
@@ -220,8 +221,19 @@ Authors and citing this repository
 
 If you find this repository useful, please cite at least one of the following papers depending on your application:
 
+#. Calibration of optical neural networks
 
-#. Unitary mesh networks:
+    .. code-block:: text
+
+        @article{pai2019parallel,
+          title={Parallel fault-tolerant programming of an arbitrary feedforward photonic network},
+          author={Pai, Sunil and Williamson, Ian AD and Hughes, Tyler W and Minkov, Momchil and Solgaard, Olav and Fan, Shanhui and Miller, David AB},
+          journal={arXiv preprint arXiv:1909.06179},
+          year={2019}
+        }
+
+
+#. Optimization of unitary mesh networks:
 
    .. code-block:: text
 
@@ -264,7 +276,7 @@ The layer APIs of ``neurophox`` are provided via the subpackages:
 
 * ``neurophox.tensorflow``
 * ``neurophox.numpy``
-* Future: ``neurophox.torch``
+* ``neurophox.torch``
 
 Some machine learning experiment starter code with ``neurophox`` can be found in `neurophox-notebooks <https://github.com/solgaardlab/neurophox-notebooks>`_\ and/or ``neurophox.ml``.
 

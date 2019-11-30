@@ -81,8 +81,7 @@ class PRM(MeshLayer):
                  num_tunable_layers_list: Optional[List[int]] = None, sampling_frequencies: Optional[List[int]] = None,
                  bs_error: float = 0.0, hadamard: bool = False,
                  theta_init_name: Optional[str] = "haar_prm", phi_init_name: Optional[str] = "random_phi",
-                 gamma_init_name: Optional[str] = "random_gamma",
-                 activation: Activation = None, **kwargs):
+                 gamma_init_name: Optional[str] = "random_gamma", activation: Activation = None, **kwargs):
         if theta_init_name == 'haar_prm' and tunable_layers_per_block is not None:
             raise NotImplementedError('haar_prm initializer is incompatible with setting tunable_layers_per_block.')
         super(PRM, self).__init__(
@@ -132,8 +131,7 @@ class SVD(CompoundTransformerLayer):
     """
 
     def __init__(self, units: int, mesh_dict: Dict, output_units: Optional[int] = None,
-                 pos_singular_values: bool = False,
-                 activation: Activation = None):
+                 pos_singular_values: bool = False, activation: Activation = None):
         self.units = units
         self.output_units = output_units if output_units is not None else units
         if output_units != units and output_units is not None:
@@ -201,9 +199,10 @@ class Diagonal(TransformerLayer):
 
     def __init__(self, units: int, is_complex: bool = True, output_units: Optional[int] = None,
                  pos: bool = False, **kwargs):
-        super(Diagonal, self).__init__(units=units, is_complex=is_complex, **kwargs)
+        super(Diagonal, self).__init__(units=units, **kwargs)
         self.output_dim = output_units if output_units is not None else units
         self.pos = pos
+        self.is_complex = is_complex
         singular_value_dim = min(self.units, self.output_dim)
         self.sigma = tf.Variable(
             name="sigma",

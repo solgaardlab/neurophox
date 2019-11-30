@@ -1,9 +1,8 @@
 import tensorflow as tf
 import numpy as np
 
-from neurophox.numpy import MeshNumpyLayer, RMNumpy, TMNumpy, BMNumpy
+from neurophox.numpy import MeshNumpyLayer, RMNumpy, TMNumpy, BMNumpy, MeshPhases
 from neurophox.meshmodel import MeshModel
-from neurophox.control import MeshPhases
 from neurophox.helpers import inverse_permutation
 
 TEST_DIMENSIONS = [7, 8]

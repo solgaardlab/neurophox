@@ -34,12 +34,13 @@ Some important requirements for Neurophox are:
 
 The dependencies for Neurophox (specified in `requirements.txt`) are:
 ```text
-numpy
+numpy>=1.16
 scipy
 matplotlib
 tensorflow>=2.0.0a
-torch>=1.1
 ```
+
+Optionally, the user may install `torch>=1.3` to run the Pytorch layers.
 
 ## Getting started
 

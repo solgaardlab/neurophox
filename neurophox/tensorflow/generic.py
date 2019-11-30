@@ -15,12 +15,10 @@ class TransformerLayer(Layer):
 
     Args:
         units: Dimension of the input to be transformed by the transformer
-        is_complex: Whether the input to be transformed is complex or not
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
-    def __init__(self, units: int, is_complex: bool = True, activation: Activation = None, **kwargs):
+    def __init__(self, units: int, activation: Activation = None, **kwargs):
         self.units = units
-        self.is_complex = is_complex
         self.activation = activation
         super(TransformerLayer, self).__init__(**kwargs)
 
@@ -94,11 +92,9 @@ class CompoundTransformerLayer(TransformerLayer):
         transformer_list: List of :class:`Transformer` objects to apply to the inputs
         is_complex: Whether the input to be transformed is complex
     """
-    def __init__(self, units: int, transformer_list: List[TransformerLayer],
-                 is_complex: bool = True):
+    def __init__(self, units: int, transformer_list: List[TransformerLayer]):
         self.transformer_list = transformer_list
-        super(CompoundTransformerLayer, self).__init__(units=units,
-                                                       is_complex=is_complex)
+        super(CompoundTransformerLayer, self).__init__(units=units)
 
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:
         """Inputs are transformed by :math:`L` transformer layers :math:`T^{(\ell)} \in \mathbb{C}^{N \\times N}` as follows:
@@ -192,7 +188,7 @@ class MeshVerticalLayer(TransformerLayer):
     Args:
         diag: the diagonal terms to multiply
         off_diag: the off-diagonal terms to multiply
-        perm: the permutation for the mesh vertical layer (prior to the coupling operation)
+        left_perm: the permutation for the mesh vertical layer (prior to the coupling operation)
         right_perm: the right permutation for the mesh vertical layer
             (usually for the final layer and after the coupling operation)
     """
@@ -372,9 +368,7 @@ class MeshPhasesTensorflow:
 
     @property
     def external_phase_shifts(self):
-        """
-
-        The external phase shift matrix of the mesh corresponds to an `L \\times N` array of phase shifts
+        """The external phase shift matrix of the mesh corresponds to an `L \\times N` array of phase shifts
         (outside of beamsplitters, thus external) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
 
         Returns:
@@ -387,9 +381,7 @@ class MeshPhasesTensorflow:
 
     @property
     def internal_phase_shift_layers(self):
-        """
-
-        Elementwise applying complex exponential to :code:`internal_phase_shifts`.
+        """Elementwise applying complex exponential to :code:`internal_phase_shifts`.
 
         Returns:
             Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
@@ -399,9 +391,7 @@ class MeshPhasesTensorflow:
 
     @property
     def external_phase_shift_layers(self):
-        """
-
-        Elementwise applying complex exponential to :code:`external_phase_shifts`.
+        """Elementwise applying complex exponential to :code:`external_phase_shifts`.
 
         Returns:
             External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
@@ -412,8 +402,7 @@ class MeshPhasesTensorflow:
 
 class Mesh:
     def __init__(self, model: MeshModel):
-        """
-        General mesh network layer defined by `neurophox.meshmodel.MeshModel`
+        """General mesh network layer defined by `neurophox.meshmodel.MeshModel`
 
         Args:
             model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)

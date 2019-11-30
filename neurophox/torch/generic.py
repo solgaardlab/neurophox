@@ -11,11 +11,16 @@ from ..helpers import pairwise_off_diag_permutation, plot_complex_matrix
 
 
 class TransformerLayer(Module):
-    def __init__(self, units: int, is_complex: bool = True, is_trainable: bool = False):
+    """Base transformer class for transformer layers (invertible functions, usually linear)
+
+    Args:
+        units: Dimension of the input to be transformed by the transformer
+        activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
+    """
+    def __init__(self, units: int, is_trainable: bool = False):
         super(TransformerLayer, self).__init__()
         self.units = units
         self.is_trainable = is_trainable
-        self.is_complex = is_complex
 
     def transform(self, inputs: torch.Tensor) -> torch.Tensor:
         return inputs
@@ -41,10 +46,9 @@ class TransformerLayer(Module):
 
 
 class CompoundTransformerLayer(TransformerLayer):
-    def __init__(self, units: int, transformer_list: List[TransformerLayer], is_complex: bool = True,
-                 is_trainable: bool = False):
+    def __init__(self, units: int, transformer_list: List[TransformerLayer], is_trainable: bool = False):
         self.transformer_list = transformer_list
-        super(CompoundTransformerLayer, self).__init__(units=units, is_complex=is_complex, is_trainable=is_trainable)
+        super(CompoundTransformerLayer, self).__init__(units=units, is_trainable=is_trainable)
 
     def transform(self, inputs: torch.Tensor) -> torch.Tensor:
         outputs = inputs
@@ -76,6 +80,14 @@ class PermutationLayer(TransformerLayer):
 
 
 class MeshVerticalLayer(TransformerLayer):
+    """
+    Args:
+        diag: the diagonal terms to multiply
+        off_diag: the off-diagonal terms to multiply
+        left_perm: the permutation for the mesh vertical layer (prior to the coupling operation)
+        right_perm: the right permutation for the mesh vertical layer
+            (usually for the final layer and after the coupling operation)
+    """
     def __init__(self, pairwise_perm_idx: np.ndarray, diag: torch.Tensor, off_diag: torch.Tensor,
                  right_perm: PermutationLayer = None, left_perm: PermutationLayer = None):
         self.diag = diag
@@ -86,6 +98,20 @@ class MeshVerticalLayer(TransformerLayer):
         self.right_perm = right_perm
 
     def transform(self, inputs: torch.Tensor) -> torch.Tensor:
+        """
+        Propagate :code:`inputs` through single layer :math:`\ell < L`
+        (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+
+        .. math::
+            V_{\mathrm{out}} = V_{\mathrm{in}} U^{(\ell')},
+
+        Args:
+            inputs: :code:`inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Propaged :code:`inputs` through single layer :math:`\ell` to form an array
+            :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
+        """
         if isinstance(inputs, np.ndarray):
             inputs = to_complex_t(inputs, self.device)
         outputs = inputs if self.left_perm is None else self.left_perm(inputs)
@@ -96,6 +122,20 @@ class MeshVerticalLayer(TransformerLayer):
         return outputs
 
     def inverse_transform(self, outputs: torch.Tensor) -> torch.Tensor:
+        """
+        Inverse-propagate :code:`inputs` through single layer :math:`\ell < L`
+        (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
+
+        .. math::
+            V_{\mathrm{in}} = V_{\mathrm{out}} (U^{(\ell')})^\dagger,
+
+        Args:
+            outputs: :code:`outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Inverse propaged :code:`outputs` through single layer :math:`\ell` to form an array
+            :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+        """
         if isinstance(outputs, np.ndarray):
             outputs = to_complex_t(outputs, self.device)
         inputs = outputs if self.right_perm is None else self.right_perm.inverse_transform(outputs)
@@ -122,6 +162,21 @@ class MeshParamTorch:
 
     @property
     def single_mode_arrangement(self) -> torch.Tensor:
+        """
+        The single-mode arrangement based on the :math:`L(\\theta)` transfer matrix for :code:`PhaseShiftUpper`
+        is one where elements of `param` are on the even rows and all odd rows are zero.
+
+        In particular, given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
+        where :math:`\\boldsymbol{\\theta}_m` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the single-mode arrangement has the stripe array form
+        :math:`\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{0}, \\boldsymbol{\\theta}_2, \\boldsymbol{0}, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{0}]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\boldsymbol{\\theta}` of the final mesh
+        and :math:`\\boldsymbol{0}` represents an array of zeros of the same size as :math:`\\boldsymbol{\\theta}_n`.
+
+        Returns:
+            Single-mode arrangement array of phases
+
+        """
         num_layers = self.param.shape[0]
         tensor_t = self.param.t()
         stripe_tensor = torch.zeros(self.units, num_layers, device=self.param.device)
@@ -133,11 +188,38 @@ class MeshParamTorch:
 
     @property
     def common_mode_arrangement(self) -> torch.Tensor:
+        """
+        The common-mode arrangement based on the :math:`C(\\theta)` transfer matrix for :code:`PhaseShiftCommonMode`
+        is one where elements of `param` are on the even rows and repeated on respective odd rows.
+
+        In particular, given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the common-mode arrangement has the stripe array form
+        :math:`\\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{\\theta}_N]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\boldsymbol{\\theta}` of the final mesh.
+
+        Returns:
+            Common-mode arrangement array of phases
+        """
         phases = self.single_mode_arrangement
         return phases + phases.roll(1, 0)
 
     @property
     def differential_mode_arrangement(self) -> torch.Tensor:
+        """
+        The differential-mode arrangement is based on the :math:`D(\\theta)` transfer matrix
+        for :code:`PhaseShiftDifferentialMode`.
+
+        Given the :code:`param` array
+        :math:`\\boldsymbol{\\theta} = [\cdots \\boldsymbol{\\theta}_m \cdots]^T`,
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the differential-mode arrangement has the form
+        :math:`\\widetilde{\\boldsymbol{\\theta}} = \\left[\cdots \\frac{\\boldsymbol{\\theta}_m}{2}, -\\frac{\\boldsymbol{\\theta}_m}{2} \cdots \\right]^T`.
+        where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\boldsymbol{\\theta}` of the final mesh.
+
+        Returns:
+            Differential-mode arrangement array of phases
+
+        """
         phases = self.single_mode_arrangement
         return phases / 2 - phases.roll(1, 0) / 2
 
@@ -152,6 +234,16 @@ class MeshParamTorch:
 
 
 class MeshPhasesTorch:
+    """Organizes the phases in the mesh into appropriate arrangements
+
+    Args:
+        theta: Array to be converted to :math:`\\boldsymbol{\\theta}`
+        phi: Array to be converted to :math:`\\boldsymbol{\\phi}`
+        gamma: Array to be converted to :math:`\\boldsymbol{\gamma}`
+        mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
+        basis: Phase basis to use
+        hadamard: Whether to use Hadamard convention
+    """
     def __init__(self, theta: Parameter, phi: Parameter, mask: np.ndarray, gamma: Parameter, units: int,
                  basis: str = SINGLEMODE, hadamard: bool = False):
         self.mask = mask if mask is not None else np.ones_like(theta)
@@ -167,6 +259,12 @@ class MeshPhasesTorch:
 
     @property
     def internal_phase_shifts(self):
+        """The internal phase shift matrix of the mesh corresponds to an `L \\times N` array of phase shifts
+        (in between beamsplitters, thus internal) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
+
+        Returns:
+            Internal phase shift matrix corresponding to :math:`\\boldsymbol{\\theta}`
+        """
         if self.basis == BLOCH:
             return self.theta.differential_mode_arrangement
         elif self.basis == SINGLEMODE:
@@ -176,6 +274,12 @@ class MeshPhasesTorch:
 
     @property
     def external_phase_shifts(self):
+        """The external phase shift matrix of the mesh corresponds to an `L \\times N` array of phase shifts
+        (outside of beamsplitters, thus external) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
+
+        Returns:
+            External phase shift matrix corresponding to :math:`\\boldsymbol{\\phi}`
+        """
         if self.basis == BLOCH or self.basis == SINGLEMODE:
             return self.phi.single_mode_arrangement
         else:
@@ -183,11 +287,21 @@ class MeshPhasesTorch:
 
     @property
     def internal_phase_shift_layers(self):
+        """Elementwise applying complex exponential to :code:`internal_phase_shifts`.
+
+        Returns:
+            Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
+        """
         internal_ps = self.internal_phase_shifts
         return torch.stack((internal_ps.cos(), internal_ps.sin()), dim=0)
 
     @property
     def external_phase_shift_layers(self):
+        """Elementwise applying complex exponential to :code:`external_phase_shifts`.
+
+        Returns:
+            External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
+        """
         external_ps = self.external_phase_shifts
         return torch.stack((external_ps.cos(), external_ps.sin()), dim=0)
 
@@ -199,8 +313,8 @@ class MeshTorchLayer(TransformerLayer):
         mesh_model: The model of the mesh network (e.g., rectangular, triangular, butterfly)
     """
 
-    def __init__(self, mesh_model: MeshModel, **kwargs):
-        super(MeshTorchLayer, self).__init__(mesh_model.units, **kwargs)
+    def __init__(self, mesh_model: MeshModel):
+        super(MeshTorchLayer, self).__init__(mesh_model.units)
         self.mesh_model = mesh_model
         enn, enp, epn, epp = self.mesh_model.mzi_error_tensors
         enn, enp, epn, epp = torch.from_numpy(enn), torch.from_numpy(enp), torch.from_numpy(epn), torch.from_numpy(epp)
@@ -215,6 +329,20 @@ class MeshTorchLayer(TransformerLayer):
         self.perm_layers = [PermutationLayer(self.mesh_model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
     def transform(self, inputs: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the operation (where :math:`U` represents the matrix for this layer):
+
+        .. math::
+            V_{\mathrm{out}} = V_{\mathrm{in}} U,
+
+        where :math:`U \in \mathrm{U}(N)` and :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            inputs: :code:`inputs` batch represented by the matrix :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Transformed :code:`inputs`, :math:`V_{\mathrm{out}}`
+        """
         mesh_phases = MeshPhasesTorch(
             theta=self.theta, phi=self.phi, gamma=self.gamma,
             mask=self.mesh_model.mask, hadamard=self.mesh_model.hadamard,
@@ -224,11 +352,25 @@ class MeshTorchLayer(TransformerLayer):
         if isinstance(inputs, np.ndarray):
             inputs = to_complex_t(inputs, self.theta.device)
         outputs = cc_mul(inputs, mesh_phases.input_phase_shift_layer)
-        for layer in range(self.num_layers):
-            outputs = mesh_layers[layer].transform(outputs)
+        for mesh_layer in mesh_layers:
+            outputs = mesh_layer(outputs)
         return outputs
 
     def inverse_transform(self, outputs: torch.Tensor) -> torch.Tensor:
+        """
+        Performs the operation (where :math:`U` represents the matrix for this layer):
+
+        .. math::
+            V_{\mathrm{in}} = V_{\mathrm{out}} U^\dagger,
+
+        where :math:`U \in \mathrm{U}(N)` and :math:`V_{\mathrm{out}}, V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
+
+        Args:
+            outputs: :code:`outputs` batch represented by the matrix :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`
+
+        Returns:
+            Inverse transformed :code:`outputs`, :math:`V_{\mathrm{in}}`
+        """
         mesh_phases = MeshPhasesTorch(
             theta=self.theta, phi=self.phi, gamma=self.gamma,
             mask=self.mesh_model.mask, hadamard=self.mesh_model.hadamard,
@@ -246,6 +388,11 @@ class MeshTorchLayer(TransformerLayer):
 
     @property
     def phases(self) -> MeshPhases:
+        """
+
+        Returns:
+            The :code:`MeshPhases` object for this layer
+        """
         return MeshPhases(
             theta=self.theta.detach().numpy() * self.mesh_model.mask,
             phi=self.phi.detach().numpy() * self.mesh_model.mask,
@@ -254,6 +401,14 @@ class MeshTorchLayer(TransformerLayer):
         )
 
     def mesh_layers(self, phases: MeshPhasesTorch) -> List[MeshVerticalLayer]:
+        """
+
+        Args:
+            phases:  The :code:`MeshPhasesTensorflow` object containing :math:`\\boldsymbol{\\theta}, \\boldsymbol{\\phi}, \\boldsymbol{\\gamma}`
+
+        Returns:
+            List of mesh layers to be used by any instance of :code:`MeshLayer`
+        """
         internal_psl = phases.internal_phase_shift_layers
         external_psl = phases.external_phase_shift_layers
 
@@ -287,6 +442,7 @@ class MeshTorchLayer(TransformerLayer):
 
         return mesh_layers
 
+
 # temporary helpers until pytorch supports complex numbers...which should be soon!
 # rc_mul is "real * complex" op
 # cc_mul is "complex * complex" op
@@ -312,4 +468,5 @@ def conj_t(comp: torch.Tensor):
 
 
 def to_complex_t(nparray: np.ndarray, device: torch.device):
-    return torch.stack((torch.as_tensor(nparray.real, device=device), torch.as_tensor(nparray.imag, device=device)), dim=0)
+    return torch.stack((torch.as_tensor(nparray.real, device=device),
+                        torch.as_tensor(nparray.imag, device=device)), dim=0)
