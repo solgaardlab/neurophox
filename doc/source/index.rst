@@ -237,22 +237,33 @@ If you find this repository useful, please cite at least one of the following pa
 
    .. code-block:: text
 
-       @article{pai2018matrix,
-         title={Matrix optimization on universal unitary photonic devices},
-         author={Pai, Sunil and Bartlett, Ben and Solgaard, Olav and Miller, David AB},
-         journal={arXiv preprint arXiv:1808.00458},
-         year={2018}
+       @article{pai_matrix_2019,
+         author = {Pai, Sunil and Bartlett, Ben and Solgaard, Olav and Miller, David A. B.},
+         doi = {10.1103/PhysRevApplied.11.064044},
+         journal = {Physical Review Applied},
+         month = jun,
+         number = {6},
+         pages = {064044},
+         title = {Matrix Optimization on Universal Unitary Photonic Devices},
+         volume = {11},
+         year = {2019}
        }
 
 #. Optical neural network nonlinearities:
 
    .. code-block:: text
 
-       @article{williamson2019reprogrammable,
-         title={Reprogrammable Electro-Optic Nonlinear Activation Functions for Optical Neural Networks},
-         author={Williamson, Ian A.D. and Hughes, Tyler W. and Minkov, Momchil and Bartlett, Ben and Pai, Sunil and Fan, Shanhui},
-         journal={arXiv preprint arXiv:1903.04579},
-         year={2019}
+       @article{williamson_reprogrammable_2020,
+         author = {Williamson, I. A. D. and Hughes, T. W. and Minkov, M. and Bartlett, B. and Pai, S. and Fan, S.},
+         doi = {10.1109/JSTQE.2019.2930455},
+         issn = {1077-260X},
+         journal = {IEEE Journal of Selected Topics in Quantum Electronics},
+         month = jan,
+         number = {1},
+         pages = {1-12},
+         title = {Reprogrammable Electro-Optic Nonlinear Activation Functions for Optical Neural Networks},
+         volume = {26},
+         year = {2020}
        }
 
 Contributions

@@ -11,6 +11,7 @@ Subpackages
     neurophox.ml
     neurophox.numpy
     neurophox.tensorflow
+    neurophox.torch
 
 
 neurophox.helpers module
