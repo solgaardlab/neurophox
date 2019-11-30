@@ -6,7 +6,8 @@ project_name = "neurophox"
 requirements = [
     "numpy>=1.16",
     "scipy",
-    "tensorflow>=2.0.0a"
+    "tensorflow>=2.0.0a",
+    "torch>=1.3"
 ]
 
 setup(
