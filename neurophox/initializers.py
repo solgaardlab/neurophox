@@ -6,6 +6,7 @@ try:
     import torch
     from torch.nn import Parameter
 except ImportError:
+    # if the user did not install pytorch, just do tensorflow stuff
     pass
 
 import numpy as np
