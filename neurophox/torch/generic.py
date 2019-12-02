@@ -17,6 +17,7 @@ class TransformerLayer(Module):
         units: Dimension of the input to be transformed by the transformer
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
+
     def __init__(self, units: int, is_trainable: bool = False):
         super(TransformerLayer, self).__init__()
         self.units = units
@@ -88,6 +89,7 @@ class MeshVerticalLayer(TransformerLayer):
         right_perm: the right permutation for the mesh vertical layer
             (usually for the final layer and after the coupling operation)
     """
+
     def __init__(self, pairwise_perm_idx: np.ndarray, diag: torch.Tensor, off_diag: torch.Tensor,
                  right_perm: PermutationLayer = None, left_perm: PermutationLayer = None):
         self.diag = diag
@@ -179,7 +181,7 @@ class MeshParamTorch:
         """
         num_layers = self.param.shape[0]
         tensor_t = self.param.t()
-        stripe_tensor = torch.zeros(self.units, num_layers, device=self.param.device)
+        stripe_tensor = torch.zeros(self.units, num_layers, dtype=torch.float32, device=self.param.device)
         if self.units % 2:
             stripe_tensor[:-1][::2] = tensor_t
         else:
@@ -244,16 +246,17 @@ class MeshPhasesTorch:
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
     """
+
     def __init__(self, theta: Parameter, phi: Parameter, mask: np.ndarray, gamma: Parameter, units: int,
                  basis: str = SINGLEMODE, hadamard: bool = False):
         self.mask = mask if mask is not None else np.ones_like(theta)
-        torch_mask = torch.as_tensor(mask, device=theta.device)
-        torch_inv_mask = torch.as_tensor(1 - mask, device=theta.device)
+        torch_mask = torch.as_tensor(mask, dtype=theta.dtype, device=theta.device)
+        torch_inv_mask = torch.as_tensor(1 - mask, dtype=theta.dtype, device=theta.device)
         self.theta = MeshParamTorch(theta * torch_mask + torch_inv_mask * (1 - hadamard) * np.pi, units=units)
         self.phi = MeshParamTorch(phi * torch_mask + torch_inv_mask * (1 - hadamard) * np.pi, units=units)
         self.gamma = gamma
         self.basis = basis
-        self.input_phase_shift_layer = torch.stack((gamma.cos(), gamma.sin()), dim=0)
+        self.input_phase_shift_layer = phasor(gamma)
         if self.theta.param.shape != self.phi.param.shape:
             raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
 
@@ -285,26 +288,6 @@ class MeshPhasesTorch:
         else:
             raise NotImplementedError(f"{self.basis} is not yet supported or invalid.")
 
-    @property
-    def internal_phase_shift_layers(self):
-        """Elementwise applying complex exponential to :code:`internal_phase_shifts`.
-
-        Returns:
-            Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
-        """
-        internal_ps = self.internal_phase_shifts
-        return torch.stack((internal_ps.cos(), internal_ps.sin()), dim=0)
-
-    @property
-    def external_phase_shift_layers(self):
-        """Elementwise applying complex exponential to :code:`external_phase_shifts`.
-
-        Returns:
-            External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
-        """
-        external_ps = self.external_phase_shifts
-        return torch.stack((external_ps.cos(), external_ps.sin()), dim=0)
-
 
 class MeshTorchLayer(TransformerLayer):
     """Mesh network layer for unitary operators implemented in numpy
@@ -317,7 +300,8 @@ class MeshTorchLayer(TransformerLayer):
         super(MeshTorchLayer, self).__init__(mesh_model.units)
         self.mesh_model = mesh_model
         enn, enp, epn, epp = self.mesh_model.mzi_error_tensors
-        enn, enp, epn, epp = torch.from_numpy(enn), torch.from_numpy(enp), torch.from_numpy(epn), torch.from_numpy(epp)
+        enn, enp, epn, epp = torch.as_tensor(enn, dtype=torch.float32), torch.as_tensor(enp, dtype=torch.float32), \
+                             torch.as_tensor(epn, dtype=torch.float32), torch.as_tensor(epp, dtype=torch.float32)
         self.register_buffer("enn", enn)
         self.register_buffer("enp", enp)
         self.register_buffer("epn", epn)
@@ -409,8 +393,8 @@ class MeshTorchLayer(TransformerLayer):
         Returns:
             List of mesh layers to be used by any instance of :code:`MeshLayer`
         """
-        internal_psl = phases.internal_phase_shift_layers
-        external_psl = phases.external_phase_shift_layers
+        internal_psl = phasor(phases.internal_phase_shifts)
+        external_psl = phasor(phases.external_phase_shifts)
 
         # smooth trick to efficiently perform the layerwise coupling computation
 
@@ -468,5 +452,9 @@ def conj_t(comp: torch.Tensor):
 
 
 def to_complex_t(nparray: np.ndarray, device: torch.device):
-    return torch.stack((torch.as_tensor(nparray.real, device=device),
-                        torch.as_tensor(nparray.imag, device=device)), dim=0)
+    return torch.stack((torch.as_tensor(nparray.real, device=device, dtype=torch.float32),
+                        torch.as_tensor(nparray.imag, device=device, dtype=torch.float32)), dim=0)
+
+
+def phasor(phase: torch.Tensor):
+    return torch.stack((phase.cos(), phase.sin()), dim=0)

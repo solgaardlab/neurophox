@@ -55,7 +55,7 @@ class MeshPhaseInitializer:
             Initialized torch Parameter
         """
         phase_initializer = self.to_np()
-        phase = Parameter(torch.tensor(phase_initializer), requires_grad=is_trainable)
+        phase = Parameter(torch.tensor(phase_initializer, dtype=torch.float32), requires_grad=is_trainable)
         return phase
 
 

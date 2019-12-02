@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-from neurophox.config import TF_COMPLEX
+from neurophox.config import TF_COMPLEX, NP_COMPLEX
 
 from neurophox.numpy import RMNumpy, TMNumpy, PRMNumpy, BMNumpy, MeshNumpyLayer
 from neurophox.tensorflow import RM, TM, PRM, BM, MeshLayer
@@ -28,7 +28,7 @@ class RMLayerTest(tf.test.TestCase):
         for units in TEST_DIMENSIONS:
             for bs_error in (0, 0.1):
                 for hadamard in (True, False):
-                    identity_matrix = np.eye(units)
+                    identity_matrix = np.eye(units, dtype=NP_COMPLEX)
                     rm = RMTorch(
                         units=units,
                         hadamard=hadamard,
@@ -56,7 +56,7 @@ class PRMLayerTest(tf.test.TestCase):
         for units in TEST_DIMENSIONS:
             for bs_error in (0, 0.1):
                 for hadamard in (True, False):
-                    identity_matrix = np.eye(units)
+                    identity_matrix = np.eye(units, dtype=NP_COMPLEX)
                     prm = PRMTorch(
                         units=units,
                         hadamard=hadamard,
@@ -84,7 +84,7 @@ class TMLayerTest(tf.test.TestCase):
         for units in TEST_DIMENSIONS:
             for bs_error in (0, 0.1):
                 for hadamard in (True, False):
-                    identity_matrix = np.eye(units)
+                    identity_matrix = np.eye(units, dtype=NP_COMPLEX)
                     tm = TMTorch(
                         units=units,
                         hadamard=hadamard,
@@ -112,7 +112,7 @@ class BMLayerTest(tf.test.TestCase):
         for units in TEST_DIMENSIONS:
             for bs_error in (0, 0.1):
                 for hadamard in (True, False):
-                    identity_matrix = np.eye(2 ** units)
+                    identity_matrix = np.eye(2 ** units, dtype=NP_COMPLEX)
                     bm = BMTorch(
                         num_layers=units,
                         hadamard=hadamard,
