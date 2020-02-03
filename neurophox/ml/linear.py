@@ -25,10 +25,13 @@ class LinearMultiModelRunner:
         train_on_test: Use same training and testing set
         store_params: Store params during the training for visualization later
     """
+
     def __init__(self, experiment_name: str, layer_names: List[str],
-                 layers: List[MeshLayer], optimizer: Union[tf.keras.optimizers.Optimizer, List[tf.keras.optimizers.Optimizer]],
-                 batch_size: int, iterations_per_epoch: int=50, iterations_per_tb_update: int=5,
-                 logdir: Optional[str]=None, train_on_test: bool=False, store_params: bool=True):  # e.g., logdir=/data/tensorboard/neurophox/
+                 layers: List[MeshLayer],
+                 optimizer: Union[tf.keras.optimizers.Optimizer, List[tf.keras.optimizers.Optimizer]],
+                 batch_size: int, iterations_per_epoch: int = 50, iterations_per_tb_update: int = 5,
+                 logdir: Optional[str] = None, train_on_test: bool = False,
+                 store_params: bool = True):  # e.g., logdir=/data/tensorboard/neurophox/
         self.losses = {name: [] for name in layer_names}
         self.results = {name: [] for name in layer_names}
         self.layer_names = layer_names
@@ -49,7 +52,7 @@ class LinearMultiModelRunner:
                 f'{self.logdir}/{experiment_name}/{name}/'
             ) for name in layer_names}
 
-    def iterate(self, target_unitary: np.ndarray, learning_rate = 1e-2, method=1, density=0.5):
+    def iterate(self, target_unitary: np.ndarray, learning_rate=1e-2, method=1, density=0.5):
         """
         Run gradient update toward a target unitary :math:`U`.
 
@@ -58,7 +61,7 @@ class LinearMultiModelRunner:
 
         """
         if self.train_on_test:
-            x_train, y_train = tf.eye(self.layers[0].units, dtype=TF_COMPLEX),\
+            x_train, y_train = tf.eye(self.layers[0].units, dtype=TF_COMPLEX), \
                                tf.convert_to_tensor(target_unitary, dtype=TF_COMPLEX)
         else:
             x_train, y_train = generate_keras_batch(self.layers[0].units, target_unitary, self.batch_size)
@@ -67,15 +70,15 @@ class LinearMultiModelRunner:
                 with tf.GradientTape() as tape:
                     loss = complex_mse(layer(x_train), y_train)
                 grads = tape.gradient(loss, layer.trainable_variables)
-
-                optimizer.apply_gradients(grads_and_vars=zip(grads, layer.trainable_variables))
             else:
-                stoch_update(layer, x_train, y_train,
-                             density=density, learning_rate=learning_rate, method=method) ### weight update already completed in the function call
+                grads = stoch_update(layer, x_train, y_train,
+                                     density=density, learning_rate=learning_rate,
+                                     method=method)  # weight update already completed in the function call
+            optimizer.apply_gradients(grads_and_vars=zip(grads, layer.trainable_variables))
             self.losses[name].append(tf.reduce_sum(
                 complex_mse(layer(tf.eye(layer.units, dtype=TF_COMPLEX)),
                             tf.convert_to_tensor(target_unitary.astype(NP_COMPLEX)))).numpy()
-            )
+                                     )
             if self.iters % self.iterations_per_tb_update and self.logdir:
                 self.update_tensorboard(name)
             if self.iters % self.iterations_per_epoch == 0 and self.store_params:
@@ -106,7 +109,8 @@ class LinearMultiModelRunner:
         with self.summary_writers[name].as_default():
             tf.summary.scalar(f'loss-{self.experiment_name}', self.losses[name][-1], step=self.iters)
 
-    def run(self, num_epochs: int, target_unitary: np.ndarray, pbar: Optional[Callable]=None, learning_rate = 1e-2, decay_rate = 0.999, method=1, density=0.5):
+    def run(self, num_epochs: int, target_unitary: np.ndarray, pbar: Optional[Callable] = None, learning_rate=1e-2,
+            decay_rate=0.999, method=1, density=0.5):
         """
 
         Args:
@@ -116,7 +120,8 @@ class LinearMultiModelRunner:
 
         """
         print('running')
-        iterator = pbar(range(num_epochs * self.iterations_per_epoch)) if pbar else range(num_epochs * self.iterations_per_epoch)
+        iterator = pbar(range(num_epochs * self.iterations_per_epoch)) if pbar else range(
+            num_epochs * self.iterations_per_epoch)
         for _ in iterator:
             self.iterate(target_unitary, learning_rate, method, density)
             learning_rate *= decay_rate
@@ -157,51 +162,41 @@ def complex_mse(y_true, y_pred):
 
 
 def stoch_update(layer, x_train, y_train, density=0.5, jig_scale=1e-5, learning_rate=1e1, method=1):
-        """
-            Update the ONN weights by perturbation.
+    """
+        Return the ONN weights by perturbation.
 
-            Args:
-                layer: callable layer for loss evaluation
-                x_train: 1 batch of data used for training
-                y_train: 1 batch of labels used for training
-                density: proportion of neurons that jiggle together
-                jig_scale: the amount of jiggling (finite difference stepsize)
-                learning_rate: learning rate (that determines stepsize of final weight update)
-                method: 1. nonuniform jiggle 2. uniform jiggle with uniform dist. 3. uniform jiggle with binary dist.
+        Args:
+            layer: callable layer for loss evaluation
+            x_train: 1 batch of data used for training
+            y_train: 1 batch of labels used for training
+            density: proportion of neurons that jiggle together
+            jig_scale: the amount of jiggling (finite difference stepsize)
+            learning_rate: learning rate (that determines stepsize of final weight update)
+            method: 1. nonuniform jiggle 2. uniform jiggle with uniform dist. 3. uniform jiggle with binary dist.
 
-        """
-        ### 1. estimating gradient
-        loss = complex_mse(layer(x_train), y_train)
-        jig_events = []
-        jig_amounts = []
-        for var in layer.variables:
-            jig_events.append(np.random.choice([0, 1], size=var.shape, p=[1-density, density]))
-            ### 2. Choose which jiggling scheme you want:
-            if method == 1:
-                ### version 1: nonuniform jiggle
-                jig_amounts.append(np.random.random(var.shape)-0.5)
-            elif method == 2:
-                ### version 2: uniform jiggle with uniform distribution
-                jig_amounts.append((np.random.random()-0.5)*np.ones(var.shape))
-            else:
-                ### version 3: uniform jiggle with binary distribution
-                jig_amounts.append((np.random.choice([0, 1])-0.5)*np.ones(var.shape))
-
-            var.assign(var.read_value()+jig_scale*jig_events[-1]*jig_amounts[-1])
-        loss_after_jiggle = complex_mse(layer(x_train), y_train)
-        # print(loss_after_jiggle.shape,y_train.shape)
-        # print(tf.reduce_sum(loss_after_jiggle-loss).numpy())
-        dldw = [tf.reduce_sum(loss_after_jiggle-loss).numpy() / i for i in jig_amounts]
-
-        # map gradient to update
-        ### 1. for schemes that may have exploding gradient, e.g. nonuniform gradient
-        # return np.tanh(gradient/gradient_scale)*gradient_scale*learning_rate
-        ### 2. for schemes that won't have exploding gradient
-        dw = [-layer_gradient * learning_rate for layer_gradient in dldw]
-        ### 3. or for a ecclectic brutal force choice:
-        # return [np.clip(-layer_gradient*learning_rate,-1e-1,1e-1) for layer_gradient in gradient] ### notice that extra strong nonlinearity is introduced here! potentially exploitable
-
-        ### 3. perform the update
-        for i, var in enumerate(layer.variables):
-            # print(i)
-            var.assign(var.read_value()-jig_scale*jig_events[i]*jig_amounts[i]+dw[i]*jig_events[i]) ## only update the weights of jiggled neurons
+    """
+    # 1. estimating gradient
+    loss = complex_mse(layer(x_train), y_train)
+    jig_events = []
+    jig_amounts = []
+    # 2. choose which perturbation scheme:
+    for var in layer.variables:
+        jig_events.append(np.random.choice([0, 1], size=var.shape, p=[1 - density, density]))
+        if method == 1:
+            # nonuniform jiggle
+            jig_amounts.append(np.random.random(var.shape) - 0.5)
+        elif method == 2:
+            # uniform jiggle with uniform distribution
+            jig_amounts.append((np.random.random() - 0.5) * np.ones(var.shape))
+        else:
+            # uniform jiggle with binary distribution
+            jig_amounts.append((np.random.choice([0, 1]) - 0.5) * np.ones(var.shape))
+        var.assign(var.read_value() + jig_scale * jig_events[-1] * jig_amounts[-1])
+    # 3. calculate new loss and undo the perturbation
+    loss_after_jiggle = complex_mse(layer(x_train), y_train)
+    for i, var in enumerate(layer.variables):
+        # only update the weights of jiggled neurons
+        var.assign(var.read_value() - jig_scale * jig_events[i] * jig_amounts[i])
+    dldw = [tf.reduce_sum(loss_after_jiggle - loss).numpy() / i for i in jig_amounts]
+    # 4. return the update, while also undoing the perturbation
+    return [-layer_gradient * learning_rate * jig_event for layer_gradient, jig_event in zip(dldw, jig_events)]
