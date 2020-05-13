@@ -299,13 +299,13 @@ class MeshTorchLayer(TransformerLayer):
     def __init__(self, mesh_model: MeshModel):
         super(MeshTorchLayer, self).__init__(mesh_model.units)
         self.mesh_model = mesh_model
-        enn, enp, epn, epp = self.mesh_model.mzi_error_tensors
-        enn, enp, epn, epp = torch.as_tensor(enn, dtype=torch.float32), torch.as_tensor(enp, dtype=torch.float32), \
-                             torch.as_tensor(epn, dtype=torch.float32), torch.as_tensor(epp, dtype=torch.float32)
-        self.register_buffer("enn", enn)
-        self.register_buffer("enp", enp)
-        self.register_buffer("epn", epn)
-        self.register_buffer("epp", epp)
+        ss, cs, sc, cc = self.mesh_model.mzi_error_tensors
+        ss, cs, sc, cc = torch.as_tensor(ss, dtype=torch.float32), torch.as_tensor(cs, dtype=torch.float32), \
+                             torch.as_tensor(sc, dtype=torch.float32), torch.as_tensor(cc, dtype=torch.float32)
+        self.register_buffer("ss", ss)
+        self.register_buffer("cs", cs)
+        self.register_buffer("sc", sc)
+        self.register_buffer("cc", cc)
         theta_init, phi_init, gamma_init = self.mesh_model.init()
         self.units, self.num_layers = self.mesh_model.units, self.mesh_model.num_layers
         self.theta, self.phi, self.gamma = theta_init.to_torch(), phi_init.to_torch(), gamma_init.to_torch()
@@ -399,15 +399,15 @@ class MeshTorchLayer(TransformerLayer):
         # smooth trick to efficiently perform the layerwise coupling computation
 
         if self.mesh_model.hadamard:
-            s11 = rc_mul(self.epp, internal_psl) + rc_mul(self.enn, internal_psl.roll(-1, 1))
-            s22 = (rc_mul(self.enn, internal_psl) + rc_mul(self.epp, internal_psl.roll(-1, 1))).roll(1, 1)
-            s12 = (rc_mul(self.enp, internal_psl) - rc_mul(self.epn, internal_psl.roll(-1, 1))).roll(1, 1)
-            s21 = rc_mul(self.epn, internal_psl) - rc_mul(self.enp, internal_psl.roll(-1, 1))
+            s11 = rc_mul(self.cc, internal_psl) + rc_mul(self.ss, internal_psl.roll(-1, 1))
+            s22 = (rc_mul(self.ss, internal_psl) + rc_mul(self.cc, internal_psl.roll(-1, 1))).roll(1, 1)
+            s12 = (rc_mul(self.cs, internal_psl) - rc_mul(self.sc, internal_psl.roll(-1, 1))).roll(1, 1)
+            s21 = rc_mul(self.sc, internal_psl) - rc_mul(self.cs, internal_psl.roll(-1, 1))
         else:
-            s11 = rc_mul(self.epp, internal_psl) - rc_mul(self.enn, internal_psl.roll(-1, 1))
-            s22 = (-rc_mul(self.enn, internal_psl) + rc_mul(self.epp, internal_psl.roll(-1, 1))).roll(1, 1)
-            s12 = s_mul(1j, (rc_mul(self.enp, internal_psl) + rc_mul(self.epn, internal_psl.roll(-1, 1))).roll(1, 1))
-            s21 = s_mul(1j, (rc_mul(self.epn, internal_psl) + rc_mul(self.enp, internal_psl.roll(-1, 1))))
+            s11 = rc_mul(self.cc, internal_psl) - rc_mul(self.ss, internal_psl.roll(-1, 1))
+            s22 = (-rc_mul(self.ss, internal_psl) + rc_mul(self.cc, internal_psl.roll(-1, 1))).roll(1, 1)
+            s12 = s_mul(1j, (rc_mul(self.cs, internal_psl) + rc_mul(self.sc, internal_psl.roll(-1, 1))).roll(1, 1))
+            s21 = s_mul(1j, (rc_mul(self.sc, internal_psl) + rc_mul(self.cs, internal_psl.roll(-1, 1))))
 
         diag_layers = cc_mul(external_psl, s11 + s22) / 2
         off_diag_layers = cc_mul(external_psl.roll(1, 1), s21 + s12) / 2

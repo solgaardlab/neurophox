@@ -51,11 +51,11 @@ class MZI(PairwiseUnitary):
 
     @property
     def reflectivity(self):
-        return np.cos(self.internal_upper - self.internal_lower) ** 2
+        return np.abs(self.matrix[0][0]) ** 2
 
     @property
     def transmissivity(self):
-        return np.sin(self.internal_upper - self.internal_lower) ** 2
+        return np.abs(self.matrix[0][1]) ** 2
 
     @property
     def matrix(self):
@@ -158,7 +158,7 @@ class BlochMZI(MZI):
 
 def get_mzi_transfer_matrix(internal_upper: float, internal_lower: float, external_upper: float, external_lower: float,
                             hadamard: float, epsilon: Tuple[float, float], dtype) -> np.ndarray:
-    """
+    """Mach-Zehnder interferometer
 
     Args:
         internal_upper: Upper internal phase shift
@@ -173,22 +173,44 @@ def get_mzi_transfer_matrix(internal_upper: float, internal_lower: float, extern
         MZI transfer matrix
 
     """
-    epp = np.sqrt(1 + epsilon[0]) * np.sqrt(1 + epsilon[1])
-    epn = np.sqrt(1 + epsilon[0]) * np.sqrt(1 - epsilon[1])
-    enp = np.sqrt(1 - epsilon[0]) * np.sqrt(1 + epsilon[1])
-    enn = np.sqrt(1 - epsilon[0]) * np.sqrt(1 - epsilon[1])
+    cc = np.cos(np.pi / 4 + epsilon[0]) * np.cos(np.pi / 4 + epsilon[1])
+    cs = np.cos(np.pi / 4 + epsilon[0]) * np.sin(np.pi / 4 + epsilon[1])
+    sc = np.sin(np.pi / 4 + epsilon[0]) * np.cos(np.pi / 4 + epsilon[1])
+    ss = np.sin(np.pi / 4 + epsilon[0]) * np.sin(np.pi / 4 + epsilon[1])
     iu, il, eu, el = internal_upper, internal_lower, external_upper, external_lower
     if hadamard:
-        return 0.5 * np.array([
-            [(epp * np.exp(1j * iu) + enn * np.exp(1j * il)) * np.exp(1j * eu),
-             (epn * np.exp(1j * iu) - enp * np.exp(1j * il)) * np.exp(1j * el)],
-            [(enp * np.exp(1j * iu) - epn * np.exp(1j * il)) * np.exp(1j * eu),
-             (enn * np.exp(1j * iu) + epp * np.exp(1j * il)) * np.exp(1j * el)]
+        return np.array([
+            [(cc * np.exp(1j * iu) + ss * np.exp(1j * il)) * np.exp(1j * eu),
+             (cs * np.exp(1j * iu) - sc * np.exp(1j * il)) * np.exp(1j * el)],
+            [(sc * np.exp(1j * iu) - cs * np.exp(1j * il)) * np.exp(1j * eu),
+             (ss * np.exp(1j * iu) + cc * np.exp(1j * il)) * np.exp(1j * el)]
         ], dtype=dtype)
     else:
-        return 0.5 * np.array([
-            [(epp * np.exp(1j * iu) - enn * np.exp(1j * il)) * np.exp(1j * eu),
-             1j * (epn * np.exp(1j * iu) + enp * np.exp(1j * il)) * np.exp(1j * el)],
-            [1j * (enp * np.exp(1j * iu) + epn * np.exp(1j * il)) * np.exp(1j * eu),
-             -(enn * np.exp(1j * iu) - epp * np.exp(1j * il)) * np.exp(1j * el)]
-        ], dtype=dtype)
+        return np.array([
+            [(cc * np.exp(1j * iu) - ss * np.exp(1j * il)) * np.exp(1j * eu),
+             1j * (cs * np.exp(1j * iu) + sc * np.exp(1j * il)) * np.exp(1j * el)],
+            [1j * (sc * np.exp(1j * iu) + cs * np.exp(1j * il)) * np.exp(1j * eu),
+             (cc * np.exp(1j * il) - ss * np.exp(1j * iu)) * np.exp(1j * el)]], dtype=dtype)
+
+
+def get_tdc_transfer_matrix(kappa: float, delta: float, external_upper: float, external_lower: float, dtype) -> np.ndarray:
+    """Tunable directional coupler
+
+    Args:
+        kappa: Phase-matched phase shift (from coupled mode theory)
+        delta: Phase-mismatched phase shift (from coupled-mode theory)
+        external_upper: Upper external phase shift
+        external_lower: Lower external phase shift
+        dtype: Type-casting to use for the matrix elements
+
+    Returns:
+        MZI transfer matrix
+
+    """
+    k, d, eu, el = kappa, delta, external_upper, external_lower
+    q = np.sqrt(k ** 2 + d ** 2)
+    s, c = np.sin(q), np.sin(q)
+    return np.array([
+        [(c + 1j * d * s / q) * np.exp(1j * (eu + d)), -1j * k * s / q * np.exp(1j * (eu + d))],
+        [-1j * k * s / q * np.exp(1j * (el - d)), (c - 1j * d * s / q) * np.exp(1j * (el - d))]
+    ], dtype=dtype)

@@ -1,6 +1,7 @@
 from typing import Optional, Union, Tuple, List
 import numpy as np
 import tensorflow as tf
+
 try:
     import torch
     from torch.nn import Parameter
@@ -27,6 +28,7 @@ class MeshModel:
         gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
     """
+
     def __init__(self, perm_idx: np.ndarray, hadamard: bool = False, num_tunable: Optional[np.ndarray] = None,
                  bs_error: float = 0.0, testing: bool = False, use_different_errors: bool = False,
                  theta_init_name: str = "random_theta", phi_init_name: str = "random_phi",
@@ -90,25 +92,36 @@ class MeshModel:
         if self.testing:
             np.random.seed(TEST_SEED)
         mask = self.mask if self.mask is not None else np.ones((self.num_layers, self.units // 2))
-        e_l = np.random.randn(self.num_layers, self.units // 2) * self.bs_error * mask
-        if self.use_different_errors:
-            if self.testing:
-                np.random.seed(TEST_SEED + 1)
-            e_r = np.random.randn(self.num_layers, self.units // 2) * self.bs_error * mask
+        if isinstance(self.bs_error, float) or isinstance(self.bs_error, int):
+            e_l = np.random.randn(self.num_layers, self.units // 2) * self.bs_error
+            if self.use_different_errors:
+                if self.testing:
+                    np.random.seed(TEST_SEED + 1)
+                e_r = np.random.randn(self.num_layers, self.units // 2) * self.bs_error
+            else:
+                e_r = e_l
+        elif isinstance(self.bs_error, np.ndarray):
+            if self.bs_error.shape != self.mask.shape:
+                raise AttributeError('bs_error.shape and mask.shape should be the same.')
+            e_l = e_r = self.bs_error
+        elif isinstance(self.bs_error, tuple):
+            if self.bs_error[0].shape != self.mask.shape or self.bs_error[1].shape != self.mask.shape:
+                raise AttributeError('bs_error.shape and mask.shape should be the same.')
+            e_l, e_r = self.bs_error
         else:
-            e_r = e_l
-        return e_l, e_r
+            raise TypeError('bs_error must be float, ndarray or (ndarray, ndarray).')
+        return e_l * mask, e_r * mask
 
     @property
     def mzi_error_tensors(self):
         e_l, e_r = self.mzi_error_matrices
 
-        enn = to_stripe_array(np.sqrt(1 - e_l) * np.sqrt(1 - e_r), self.units)
-        epn = to_stripe_array(np.sqrt(1 + e_l) * np.sqrt(1 - e_r), self.units)
-        enp = to_stripe_array(np.sqrt(1 - e_l) * np.sqrt(1 + e_r), self.units)
-        epp = to_stripe_array(np.sqrt(1 + e_l) * np.sqrt(1 + e_r), self.units)
+        cc = 2 * to_stripe_array(np.cos(np.pi / 4 + e_l) * np.cos(np.pi / 4 + e_r), self.units)
+        cs = 2 * to_stripe_array(np.cos(np.pi / 4 + e_l) * np.sin(np.pi / 4 + e_r), self.units)
+        sc = 2 * to_stripe_array(np.sin(np.pi / 4 + e_l) * np.cos(np.pi / 4 + e_r), self.units)
+        ss = 2 * to_stripe_array(np.sin(np.pi / 4 + e_l) * np.sin(np.pi / 4 + e_r), self.units)
 
-        return enn, epn, enp, epp
+        return ss, cs, sc, cc
 
 
 class RectangularMeshModel(MeshModel):
@@ -127,6 +140,7 @@ class RectangularMeshModel(MeshModel):
         phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
+
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, bs_error: float = 0.0,
                  basis: str = BLOCH, theta_init_name: str = "haar_rect", phi_init_name: str = "random_phi",
                  gamma_init_name: str = "random_gamma"):
@@ -159,6 +173,7 @@ class TriangularMeshModel(MeshModel):
         phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
+
     def __init__(self, units: int, hadamard: bool = False, bs_error: float = 0.0, basis: str = BLOCH,
                  theta_init_name: str = "haar_tri", phi_init_name: str = "random_phi",
                  gamma_init_name: str = "random_gamma"):
@@ -190,8 +205,9 @@ class ButterflyMeshModel(MeshModel):
         phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
+
     def __init__(self, num_layers: int, hadamard: bool = False,
-                 bs_error: float = 0.0, basis: str=BLOCH,
+                 bs_error: float = 0.0, basis: str = BLOCH,
                  theta_init_name: str = "random_theta", phi_init_name: str = "random_phi",
                  gamma_init_name: str = "random_gamma"):
         super(ButterflyMeshModel, self).__init__(butterfly_permutation(num_layers),

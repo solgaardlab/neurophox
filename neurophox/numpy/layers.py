@@ -1,7 +1,6 @@
 import numpy as np
 from typing import Optional, List
 
-
 from .generic import MeshNumpyLayer, MeshPhases
 from ..config import DEFAULT_BASIS
 from ..meshmodel import RectangularMeshModel, TriangularMeshModel, PermutingRectangularMeshModel, ButterflyMeshModel
@@ -30,13 +29,17 @@ class RMNumpy(MeshNumpyLayer):
                                  theta_init_name, phi_init_name, gamma_init_name), phases
         )
 
-    def propagate(self, inputs: np.ndarray, explicit: bool=False, viz_perm_idx: Optional[np.ndarray]=None) -> np.ndarray:
-        viz_perm_idx = grid_viz_permutation(self.units, self.num_layers, flip=explicit) if viz_perm_idx is None else viz_perm_idx
+    def propagate(self, inputs: np.ndarray, explicit: bool = False,
+                  viz_perm_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        viz_perm_idx = grid_viz_permutation(self.units, self.num_layers,
+                                            flip=explicit) if viz_perm_idx is None else viz_perm_idx
         # viz_perm_idx = None
         return super(RMNumpy, self).propagate(inputs, explicit, viz_perm_idx)
 
-    def inverse_propagate(self, inputs: np.ndarray, explicit: bool=False, viz_perm_idx: Optional[np.ndarray]=None) -> np.ndarray:
-        viz_perm_idx = grid_viz_permutation(self.units, self.num_layers, flip=explicit) if viz_perm_idx is None else viz_perm_idx
+    def inverse_propagate(self, inputs: np.ndarray, explicit: bool = False,
+                          viz_perm_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        viz_perm_idx = grid_viz_permutation(self.units, self.num_layers,
+                                            flip=explicit) if viz_perm_idx is None else viz_perm_idx
         # viz_perm_idx = None
         return super(RMNumpy, self).inverse_propagate(inputs, explicit, viz_perm_idx)
 
@@ -59,11 +62,13 @@ class TMNumpy(MeshNumpyLayer):
                                 theta_init_name, phi_init_name, gamma_init_name), phases
         )
 
-    def propagate(self, inputs: np.ndarray, explicit: bool=False, viz_perm_idx: Optional[np.ndarray]=None) -> np.ndarray:
+    def propagate(self, inputs: np.ndarray, explicit: bool = False,
+                  viz_perm_idx: Optional[np.ndarray] = None) -> np.ndarray:
         viz_perm_idx = grid_viz_permutation(self.units, self.num_layers) if viz_perm_idx is None else viz_perm_idx
         return super(TMNumpy, self).propagate(inputs, explicit, viz_perm_idx)
 
-    def inverse_propagate(self, inputs: np.ndarray, explicit: bool=False, viz_perm_idx: Optional[np.ndarray]=None) -> np.ndarray:
+    def inverse_propagate(self, inputs: np.ndarray, explicit: bool = False,
+                          viz_perm_idx: Optional[np.ndarray] = None) -> np.ndarray:
         viz_perm_idx = grid_viz_permutation(self.units, self.num_layers) if viz_perm_idx is None else viz_perm_idx
         return super(TMNumpy, self).inverse_propagate(inputs, explicit, viz_perm_idx)
 

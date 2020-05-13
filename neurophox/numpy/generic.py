@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple, Callable, Union
 
 import numpy as np
 from ..helpers import plot_complex_matrix, inverse_permutation, ordered_viz_permutation, to_stripe_array
@@ -13,6 +13,7 @@ class TransformerNumpyLayer:
     Args:
         units: Dimension of the input, :math:`N`.
     """
+
     def __init__(self, units: int):
         self.units = units
 
@@ -105,8 +106,9 @@ class MeshVerticalNumpyLayer(TransformerNumpyLayer):
         right_perm_idx: the right permutation for the mesh vertical layer
             (usually for the final layer and after the coupling operation)
     """
+
     def __init__(self, tunable_layer: np.ndarray,
-                 right_perm_idx: Optional[np.ndarray]=None, left_perm_idx: Optional[np.ndarray] = None):
+                 right_perm_idx: Optional[np.ndarray] = None, left_perm_idx: Optional[np.ndarray] = None):
         self.tunable_layer = tunable_layer
         self.left_perm_idx = left_perm_idx
         self.right_perm_idx = right_perm_idx
@@ -172,6 +174,7 @@ class MeshParam:
         param: parameter to arrange in mesh
         units: number of inputs/outputs of the mesh
     """
+
     def __init__(self, param: np.ndarray, units: int):
         self.param = param
         self.units = units
@@ -281,15 +284,21 @@ class MeshPhases:
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
     """
-    def __init__(self, theta: np.ndarray, phi: np.ndarray, gamma: np.ndarray, mask: np.ndarray=None,
-                 basis: str = BLOCH, hadamard: bool = False):
+
+    def __init__(self, theta: np.ndarray, phi: np.ndarray, gamma: np.ndarray, mask: np.ndarray = None,
+                 basis: str = BLOCH, hadamard: bool = False,
+                 phase_loss_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None):
         self.mask = mask if mask is not None else np.ones_like(theta)
         self.theta = MeshParam(theta * self.mask + (1 - self.mask) * (1 - hadamard) * np.pi, gamma.size)
         self.phi = MeshParam(phi * self.mask + (1 - self.mask) * (1 - hadamard) * np.pi, gamma.size)
         self.gamma = gamma
         self.hadamard = hadamard
         self.basis = basis
-        self.input_phase_shift_layer = np.exp(1j * gamma)
+        if phase_loss_fn is None:
+            self.input_phase_shift_layer = np.exp(1j * gamma)
+        else:
+            self.input_phase_shift_layer = np.exp(1j * gamma) * (1 - phase_loss_fn(gamma))
+        self.phase_loss_fn = phase_loss_fn
         if self.theta.param.shape != self.phi.param.shape:
             raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
 
@@ -334,7 +343,10 @@ class MeshPhases:
         Returns:
             Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
         """
-        return np.exp(1j * self.internal_phase_shifts)
+        if self.phase_loss_fn is not None:
+            return np.exp(1j * self.internal_phase_shifts) * (1 - self.phase_loss_fn(self.internal_phase_shifts))
+        else:
+            return np.exp(1j * self.internal_phase_shifts)
 
     @property
     def external_phase_shift_layers(self):
@@ -345,7 +357,10 @@ class MeshPhases:
         Returns:
             External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
         """
-        return np.exp(1j * self.external_phase_shifts)
+        if self.phase_loss_fn is not None:
+            return np.exp(1j * self.external_phase_shifts) * (1 - self.phase_loss_fn(self.external_phase_shifts))
+        else:
+            return np.exp(1j * self.external_phase_shifts)
 
     def __add__(self, other_rm_mesh_phases):
         return MeshPhases(self.theta.param + other_rm_mesh_phases.theta.param,
@@ -365,6 +380,7 @@ class MeshNumpy:
     Args:
         model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
     """
+
     def __init__(self, model: MeshModel):
         self.model = model
         self.units, self.num_layers = self.model.units, self.model.num_layers
@@ -436,7 +452,8 @@ class MeshNumpy:
             beamsplitter_layers_l.append(MeshVerticalNumpyLayer(beamsplitter_layer_l,
                                                                 left_perm_idx=self.model.perm_idx[layer]))
             beamsplitter_layers_r.append(MeshVerticalNumpyLayer(beamsplitter_layer_r,
-                                                                right_perm_idx=None if layer < self.num_layers - 1 else self.model.perm_idx[-1]))
+                                                                right_perm_idx=None if layer < self.num_layers - 1 else
+                                                                self.model.perm_idx[-1]))
         return beamsplitter_layers_l, beamsplitter_layers_r
 
 
@@ -447,12 +464,15 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         mesh_model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
         phases: The MeshPhases control parameters for the mesh
     """
-    def __init__(self, mesh_model: MeshModel, phases: Optional[MeshPhases]=None):
+
+    def __init__(self, mesh_model: MeshModel, phases: Optional[MeshPhases] = None,
+                  phase_loss_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None):
         self.mesh = MeshNumpy(mesh_model)
+        self.phase_loss_fn = phase_loss_fn
         self._setup(phases)
         super(MeshNumpyLayer, self).__init__(self.units)
 
-    def _setup(self, phases, testing: bool=False):
+    def _setup(self, phases, testing: bool = False):
         self.mesh.model.testing = testing
         if phases is None:
             theta_init, phi_init, gamma_init = self.mesh.model.init()
@@ -483,8 +503,23 @@ class MeshNumpyLayer(TransformerNumpyLayer):
             Forward transformation of :code:`inputs`
         """
         outputs = inputs * self.phases.input_phase_shift_layer
-        for layer in range(self.num_layers):
-            outputs = self.mesh_layers[layer].transform(outputs)
+        if self.phase_loss_fn:
+            for layer in range(self.num_layers):
+                # first coupling event
+                outputs = self.beamsplitter_layers_l[layer].transform(outputs)
+                # phase shift event
+                outputs = outputs * self.internal_phase_shift_layers[layer]
+                # second coupling event
+                outputs = self.beamsplitter_layers_r[layer].transform(outputs)
+                # phase shift event
+                if layer == self.num_layers - 1:
+                    outputs = outputs * self.external_phase_shift_layers[layer].take(
+                        self.beamsplitter_layers_r[layer].right_perm_idx)
+                else:
+                    outputs = outputs * self.external_phase_shift_layers[layer]
+        else:
+            for layer in range(self.num_layers):
+                outputs = self.mesh_layers[layer].transform(outputs)
         return outputs
 
     def inverse_transform(self, outputs: np.ndarray) -> np.ndarray:
@@ -508,7 +543,7 @@ class MeshNumpyLayer(TransformerNumpyLayer):
         inputs = inputs * np.conj(self.phases.input_phase_shift_layer)
         return inputs
 
-    def propagate(self, inputs: np.ndarray, explicit: bool=False, viz_perm_idx: np.ndarray=None) -> np.ndarray:
+    def propagate(self, inputs: np.ndarray, explicit: bool = False, viz_perm_idx: np.ndarray = None) -> np.ndarray:
         """
         Propagate :code:`inputs` for each :math:`\ell < L`
         (where :math:`U_\ell` represents the matrix for layer :math:`\ell`):
@@ -523,15 +558,17 @@ class MeshNumpyLayer(TransformerNumpyLayer):
             explicit: explicitly show field propagation through the MZIs (useful for photonic simulations)
             viz_perm_idx: permutation of fields to visualize the propagation (:code:`None` means do not permute fields),
             this is useful for grid meshes, e.g. rectangular and triangular meshes.
+            phase_loss_fn: a function converting phase shift to loss
 
         Returns:
             Propagation of :code:`inputs` over all :math:`L` layers to form an array
             :math:`V_{\mathrm{prop}} \in \mathbb{C}^{L \\times M \\times N}`,
             which is a concatenation of the :math:`V_{\ell}`.
         """
-        viz_perm_idx = viz_perm_idx if viz_perm_idx is not None else ordered_viz_permutation(self.units, self.num_layers)
+        viz_perm_idx = viz_perm_idx if viz_perm_idx is not None else ordered_viz_permutation(self.units,
+                                                                                             self.num_layers)
         outputs = inputs * self.phases.input_phase_shift_layer
-        if explicit:
+        if explicit or self.phase_loss_fn is not None:
             fields = np.zeros((4 * self.num_layers + 1, *outputs.shape), dtype=NP_COMPLEX)
             fields[0] = outputs
             for layer in range(self.num_layers):
@@ -560,8 +597,8 @@ class MeshNumpyLayer(TransformerNumpyLayer):
                 fields[layer + 1] = outputs.take(viz_perm_idx[layer + 1], axis=-1)
         return fields
 
-    def inverse_propagate(self, outputs: np.ndarray, explicit: bool=False,
-                          viz_perm_idx: Optional[np.ndarray]=None) -> np.ndarray:
+    def inverse_propagate(self, outputs: np.ndarray, explicit: bool = False,
+                          viz_perm_idx: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Inverse propagate :code:`outputs` for each :math:`\ell < L` (where :math:`U_\ell`
         represents the matrix for layer :math:`\ell`):
@@ -587,7 +624,8 @@ class MeshNumpyLayer(TransformerNumpyLayer):
             fields = np.zeros((self.num_layers * 4 + 1, *inputs.shape), dtype=NP_COMPLEX)
             for layer in reversed(range(self.num_layers)):
                 # measure phi fields
-                fields[4 * layer + 4] = inputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else inputs
+                fields[4 * layer + 4] = inputs.take(viz_perm_idx[layer + 1],
+                                                    axis=-1) if viz_perm_idx is not None else inputs
                 # inputs = inputs * np.conj(self.external_phase_shift_layers[layer])
                 if layer == self.num_layers - 1:
                     inputs = inputs * self.external_phase_shift_layers[layer].take(
@@ -595,19 +633,23 @@ class MeshNumpyLayer(TransformerNumpyLayer):
                 else:
                     inputs = inputs * self.external_phase_shift_layers[layer].conj()
                 # first coupling event
-                fields[4 * layer + 3] = inputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else inputs
+                fields[4 * layer + 3] = inputs.take(viz_perm_idx[layer + 1],
+                                                    axis=-1) if viz_perm_idx is not None else inputs
                 inputs = self.beamsplitter_layers_r[layer].inverse_transform(inputs)
                 # measure theta fields, phase shift event
-                fields[4 * layer + 2] = inputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else inputs
+                fields[4 * layer + 2] = inputs.take(viz_perm_idx[layer + 1],
+                                                    axis=-1) if viz_perm_idx is not None else inputs
                 inputs = inputs * np.conj(self.internal_phase_shift_layers[layer])
                 # second coupling event
-                fields[4 * layer + 1] = inputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else inputs
+                fields[4 * layer + 1] = inputs.take(viz_perm_idx[layer + 1],
+                                                    axis=-1) if viz_perm_idx is not None else inputs
                 inputs = self.beamsplitter_layers_l[layer].inverse_transform(inputs)
             fields[0] = inputs
         else:
             fields = np.zeros((self.num_layers + 1, *inputs.shape), dtype=NP_COMPLEX)
             for layer in reversed(range(self.num_layers)):
-                fields[layer + 1] = inputs.take(viz_perm_idx[layer + 1], axis=-1) if viz_perm_idx is not None else inputs
+                fields[layer + 1] = inputs.take(viz_perm_idx[layer + 1],
+                                                axis=-1) if viz_perm_idx is not None else inputs
                 inputs = self.mesh_layers[layer].inverse_transform(inputs)
             fields[0] = inputs
         return fields
@@ -637,6 +679,44 @@ class MeshNumpyLayer(TransformerNumpyLayer):
             nullification_set[layer] = propagated_unitary[layer].conj() @ desired_vector
         return nullification_set
 
+    def adjoint_variable_fields(self, inputs: np.ndarray, adjoint_inputs: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        # shine inputs forward
+        input_fields = self.propagate(inputs, True,
+                                      ordered_viz_permutation(units=self.units,
+                                                              num_layers=self.num_layers))
+        # shine adjoint inputs (backpropagated error) backward
+        adjoint_input_fields = self.inverse_propagate(adjoint_inputs, True,
+                                                      ordered_viz_permutation(units=self.units,
+                                                                              num_layers=self.num_layers))
+        # get interference term for input and adjoint input fields
+        interference_meas = 2 * (input_fields * adjoint_input_fields.conj()).imag
+
+        return input_fields, adjoint_input_fields, interference_meas
+
+    def adjoint_variable_gradient(self, inputs: np.ndarray, adjoint_inputs: np.ndarray) -> MeshPhases:
+        # get measurements
+        input_fields, adjoint_input_fields, interference_meas = self.adjoint_variable_fields(inputs, adjoint_inputs)
+
+        input_meas = interference_meas[0]
+        # layer 1 mod 4 is after internal phase shifters
+        internal_meas = interference_meas[1:][1::4]
+        internal_meas = internal_meas[:, :-1] if self.units % 2 else internal_meas
+        # layer 3 mod 4 is after external phase shifters
+        external_meas = interference_meas[1:][3::4]
+        external_meas = external_meas[:, :-1] if self.units % 2 else external_meas
+
+        # use interference fields to get gradient information for RD mesh
+        if self.mesh.model.basis == BLOCH:
+            return MeshPhases(np.sum(internal_meas[:, ::2] / 2 - internal_meas[:, 1::2] / 2, axis=-1),
+                              np.sum(external_meas[:, ::2], axis=-1),
+                              self.mesh.model.mask,
+                              np.sum(input_meas, axis=-1))
+        else:
+            return MeshPhases(np.sum(internal_meas[:, ::2], axis=-1),
+                              np.sum(external_meas[:, ::2], axis=-1),
+                              self.mesh.model.mask,
+                              np.sum(input_meas, axis=-1))
+
     @property
     def phases(self):
         """
@@ -650,5 +730,6 @@ class MeshNumpyLayer(TransformerNumpyLayer):
             mask=self.mesh.model.mask,
             gamma=self.gamma,
             basis=self.mesh.model.basis,
-            hadamard=self.mesh.model.hadamard
+            hadamard=self.mesh.model.hadamard,
+            phase_loss_fn=self.phase_loss_fn
         )

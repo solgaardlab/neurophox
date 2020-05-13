@@ -410,9 +410,9 @@ class Mesh:
         self.model = model
         self.units, self.num_layers = self.model.units, self.model.num_layers
         self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
-        enn, enp, epn, epp = self.model.mzi_error_tensors
-        self.enn, self.enp, self.epn, self.epp = tf.constant(enn, dtype=TF_COMPLEX), tf.constant(enp, dtype=TF_COMPLEX),\
-                                                 tf.constant(epn, dtype=TF_COMPLEX), tf.constant(epp, dtype=TF_COMPLEX)
+        ss, cs, sc, cc = self.model.mzi_error_tensors
+        self.ss, self.cs, self.sc, self.cc = tf.constant(ss, dtype=TF_COMPLEX), tf.constant(cs, dtype=TF_COMPLEX), \
+                                               tf.constant(sc, dtype=TF_COMPLEX), tf.constant(cc, dtype=TF_COMPLEX)
         self.perm_layers = [PermutationLayer(self.model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
     def mesh_layers(self, phases: MeshPhasesTensorflow) -> List[MeshVerticalLayer]:
@@ -429,15 +429,15 @@ class Mesh:
         # smooth trick to efficiently perform the layerwise coupling computation
 
         if self.model.hadamard:
-            s11 = (self.epp * internal_psl + self.enn * roll_tensor(internal_psl, up=True))
-            s22 = roll_tensor(self.enn * internal_psl + self.epp * roll_tensor(internal_psl, up=True))
-            s12 = roll_tensor(self.enp * internal_psl - self.epn * roll_tensor(internal_psl, up=True))
-            s21 = (self.epn * internal_psl - self.enp * roll_tensor(internal_psl, up=True))
+            s11 = (self.cc * internal_psl + self.ss * roll_tensor(internal_psl, up=True))
+            s22 = roll_tensor(self.ss * internal_psl + self.cc * roll_tensor(internal_psl, up=True))
+            s12 = roll_tensor(self.cs * internal_psl - self.sc * roll_tensor(internal_psl, up=True))
+            s21 = (self.sc * internal_psl - self.cs * roll_tensor(internal_psl, up=True))
         else:
-            s11 = (self.epp * internal_psl - self.enn * roll_tensor(internal_psl, up=True))
-            s22 = roll_tensor(-self.enn * internal_psl + self.epp * roll_tensor(internal_psl, up=True))
-            s12 = 1j * roll_tensor(self.enp * internal_psl + self.epn * roll_tensor(internal_psl, up=True))
-            s21 = 1j * (self.epn * internal_psl + self.enp * roll_tensor(internal_psl, up=True))
+            s11 = (self.cc * internal_psl - self.ss * roll_tensor(internal_psl, up=True))
+            s22 = roll_tensor(-self.ss * internal_psl + self.cc * roll_tensor(internal_psl, up=True))
+            s12 = 1j * roll_tensor(self.cs * internal_psl + self.sc * roll_tensor(internal_psl, up=True))
+            s21 = 1j * (self.sc * internal_psl + self.cs * roll_tensor(internal_psl, up=True))
 
         diag_layers = external_psl * (s11 + s22) / 2
         off_diag_layers = roll_tensor(external_psl) * (s21 + s12) / 2

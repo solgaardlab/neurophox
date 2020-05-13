@@ -25,6 +25,7 @@ class PairwiseUnitary:
         dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
+
     def __init__(self, dtype=NP_COMPLEX):
         self.dtype = dtype
 
@@ -59,7 +60,7 @@ class PairwiseUnitary:
     def inverse_matrix(self) -> np.ndarray:
         return self.matrix.conj().T
 
-    def givens_rotation(self, units: int, m: int, n: Optional[int]=None, i_factor=False) -> np.ndarray:
+    def givens_rotation(self, units: int, m: int, n: Optional[int] = None, i_factor=False) -> np.ndarray:
         """Givens rotation matrix :math:`T_{m, n}` which rotates any vector about axes :math:`m, n`.
 
         Args:
@@ -115,18 +116,19 @@ class Beamsplitter(PairwiseUnitary):
         dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
-    def __init__(self, hadamard: bool, epsilon: float=0, dtype=NP_COMPLEX):
+
+    def __init__(self, hadamard: bool, epsilon: float = 0, dtype=NP_COMPLEX):
         super(Beamsplitter, self).__init__(dtype=dtype)
         self.hadamard = hadamard
         self.epsilon = epsilon
 
     @property
     def reflectivity(self) -> float:
-        return 0.5 + self.epsilon / 2
+        return np.cos(np.pi / 4 + self.epsilon) ** 2
 
     @property
     def transmissivity(self) -> float:
-        return 0.5 - self.epsilon / 2
+        return np.sin(np.pi / 4 + self.epsilon) ** 2
 
     @property
     def matrix(self) -> np.ndarray:
@@ -157,6 +159,7 @@ class PhaseShiftUpper(PairwiseUnitary):
         dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
+
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):
         super(PhaseShiftUpper, self).__init__(dtype=dtype)
         self.phase_shift = phase_shift
@@ -182,6 +185,7 @@ class PhaseShiftLower(PairwiseUnitary):
         dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
+
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):
         super(PhaseShiftLower, self).__init__(dtype=dtype)
         self.phase_shift = phase_shift
@@ -207,6 +211,7 @@ class PhaseShiftDifferentialMode(PairwiseUnitary):
         dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
+
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):
         super(PhaseShiftDifferentialMode, self).__init__(dtype=dtype)
         self.phase_shift = phase_shift
@@ -232,6 +237,7 @@ class PhaseShiftCommonMode(PairwiseUnitary):
         dtype: Cast values as :code:`dtype` for this pairwise unitary operator
 
     """
+
     def __init__(self, phase_shift: float, dtype=NP_COMPLEX):
         super(PhaseShiftCommonMode, self).__init__(dtype=dtype)
         self.phase_shift = phase_shift
