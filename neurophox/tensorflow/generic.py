@@ -464,10 +464,11 @@ class MeshLayer(TransformerLayer):
     """
 
     def __init__(self, mesh_model: MeshModel, activation: Activation = None,
-                 include_diagonal_phases: bool = True, **kwargs):
+                 include_diagonal_phases: bool = True, incoherent: bool = False, **kwargs):
         self.mesh = Mesh(mesh_model)
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
         self.include_diagonal_phases = include_diagonal_phases
+        self.incoherent = incoherent
         super(MeshLayer, self).__init__(self.units, activation=activation, **kwargs)
         theta_init, phi_init, gamma_init = self.mesh.model.init()
         self.theta, self.phi, self.gamma = theta_init.to_tf("theta"), phi_init.to_tf("phi"), gamma_init.to_tf("gamma")
@@ -488,10 +489,16 @@ class MeshLayer(TransformerLayer):
         Returns:
             Transformed :code:`inputs`, :math:`V_{\mathrm{out}}`
         """
+        _inputs = np.eye(self.units, dtype=np.complex64) if self.incoherent else inputs
         mesh_phases, mesh_layers = self.phases_and_layers
-        outputs = inputs * mesh_phases.input_phase_shift_layer if self.include_diagonal_phases else inputs
+        outputs = _inputs * mesh_phases.input_phase_shift_layer if self.include_diagonal_phases else _inputs
         for layer in range(self.num_layers):
             outputs = mesh_layers[layer].transform(outputs)
+        if self.incoherent:
+            power_matrix = tf.math.real(outputs) ** 2 + tf.math.imag(outputs) ** 2
+            power_inputs = tf.math.real(inputs) ** 2 + tf.math.imag(inputs) ** 2
+            outputs = power_inputs @ power_matrix
+            return tf.complex(tf.sqrt(outputs), tf.zeros_like(outputs))
         return outputs
 
     @tf.function

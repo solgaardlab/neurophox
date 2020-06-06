@@ -25,14 +25,15 @@ class RM(MeshLayer):
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
-    def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = DEFAULT_BASIS,
+    def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, incoherent: bool = False,
+                 basis: str = DEFAULT_BASIS,
                  bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_rect",
                  phi_init_name: Optional[str] = "random_phi", gamma_init_name: Optional[str] = "random_gamma",
                  include_diagonal_phases=True, activation: Activation = None, **kwargs):
         super(RM, self).__init__(
             RectangularMeshModel(units, num_layers, hadamard, bs_error, basis,
                                  theta_init_name, phi_init_name, gamma_init_name),
-            activation=activation, include_diagonal_phases=include_diagonal_phases, **kwargs
+            activation=activation, incoherent=incoherent, include_diagonal_phases=include_diagonal_phases, **kwargs
         )
 
 
@@ -50,14 +51,14 @@ class TM(MeshLayer):
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
-    def __init__(self, units: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
+    def __init__(self, units: int, hadamard: bool = False, incoherent: bool = False, basis: str = DEFAULT_BASIS,
                  bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_tri",
                  phi_init_name: Optional[str] = "random_phi", gamma_init_name: Optional[str] = "random_gamma",
                  activation: Activation = None, **kwargs):
         super(TM, self).__init__(
             TriangularMeshModel(units, hadamard, bs_error, basis,
                                 theta_init_name, phi_init_name, gamma_init_name),
-            activation, **kwargs
+            activation=activation, incoherent=incoherent, **kwargs
         )
 
 
@@ -79,7 +80,7 @@ class PRM(MeshLayer):
 
     def __init__(self, units: int, tunable_layers_per_block: int = None,
                  num_tunable_layers_list: Optional[List[int]] = None, sampling_frequencies: Optional[List[int]] = None,
-                 bs_error: float = 0.0, hadamard: bool = False,
+                 bs_error: float = 0.0, hadamard: bool = False, incoherent: bool = False,
                  theta_init_name: Optional[str] = "haar_prm", phi_init_name: Optional[str] = "random_phi",
                  gamma_init_name: Optional[str] = "random_gamma", activation: Activation = None, **kwargs):
         if theta_init_name == 'haar_prm' and tunable_layers_per_block is not None:
@@ -88,7 +89,7 @@ class PRM(MeshLayer):
             PermutingRectangularMeshModel(units, tunable_layers_per_block, num_tunable_layers_list,
                                           sampling_frequencies, bs_error, hadamard,
                                           theta_init_name, phi_init_name, gamma_init_name),
-            activation=activation, **kwargs
+            activation=activation, incoherent=incoherent, **kwargs
         )
 
 
@@ -105,13 +106,13 @@ class BM(MeshLayer):
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
-    def __init__(self, num_layers: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
+    def __init__(self, num_layers: int, hadamard: bool = False, incoherent: bool = False, basis: str = DEFAULT_BASIS,
                  bs_error: float = 0.0, theta_init_name: Optional[str] = "random_theta",
                  phi_init_name: Optional[str] = "random_phi",
                  activation: Activation = None, **kwargs):
         super(BM, self).__init__(
             ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init_name, phi_init_name),
-            activation=activation, **kwargs
+            activation=activation, incoherent=incoherent, **kwargs
         )
 
 
