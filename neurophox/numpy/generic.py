@@ -283,6 +283,7 @@ class MeshPhases:
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
+        phase_loss_fn: Incorporate phase shift-dependent loss into the model
     """
 
     def __init__(self, theta: np.ndarray, phi: np.ndarray, gamma: np.ndarray, mask: np.ndarray = None,
@@ -294,11 +295,8 @@ class MeshPhases:
         self.gamma = gamma
         self.hadamard = hadamard
         self.basis = basis
-        if phase_loss_fn is None:
-            self.input_phase_shift_layer = np.exp(1j * gamma)
-        else:
-            self.input_phase_shift_layer = np.exp(1j * gamma) * (1 - phase_loss_fn(gamma))
-        self.phase_loss_fn = phase_loss_fn
+        self.phase_loss_fn = (lambda x: 0) if phase_loss_fn is None else phase_loss_fn
+        self.input_phase_shift_layer = np.exp(1j * gamma) * (1 - self.phase_loss_fn(gamma))
         if self.theta.param.shape != self.phi.param.shape:
             raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
 
@@ -343,10 +341,7 @@ class MeshPhases:
         Returns:
             Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
         """
-        if self.phase_loss_fn is not None:
-            return np.exp(1j * self.internal_phase_shifts) * (1 - self.phase_loss_fn(self.internal_phase_shifts))
-        else:
-            return np.exp(1j * self.internal_phase_shifts)
+        return np.exp(1j * self.internal_phase_shifts) * (1 - self.phase_loss_fn(self.internal_phase_shifts))
 
     @property
     def external_phase_shift_layers(self):
@@ -357,10 +352,7 @@ class MeshPhases:
         Returns:
             External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
         """
-        if self.phase_loss_fn is not None:
-            return np.exp(1j * self.external_phase_shifts) * (1 - self.phase_loss_fn(self.external_phase_shifts))
-        else:
-            return np.exp(1j * self.external_phase_shifts)
+        return np.exp(1j * self.external_phase_shifts) * (1 - self.phase_loss_fn(self.external_phase_shifts))
 
     def __add__(self, other_rm_mesh_phases):
         return MeshPhases(self.theta.param + other_rm_mesh_phases.theta.param,

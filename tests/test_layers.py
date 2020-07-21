@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import pytest
 
 from neurophox.config import TF_COMPLEX, NP_COMPLEX
 
@@ -34,8 +35,8 @@ class RMLayerTest(tf.test.TestCase):
                         hadamard=hadamard,
                         bs_error=bs_error
                     )
-                    self.assertAllClose(rm.matrix.conj().T @ rm.matrix, identity_matrix)
-                    self.assertAllClose(rm.matrix.conj().T, rm.inverse_matrix)
+                    self.assertAllClose(rm.matrix().conj().T @ rm.matrix(), identity_matrix)
+                    self.assertAllClose(rm.matrix().conj().T, rm.inverse_matrix())
 
 
 class PRMLayerTest(tf.test.TestCase):
@@ -62,8 +63,8 @@ class PRMLayerTest(tf.test.TestCase):
                         hadamard=hadamard,
                         bs_error=bs_error
                     )
-                    self.assertAllClose(prm.matrix.conj().T @ prm.matrix, identity_matrix)
-                    self.assertAllClose(prm.matrix.conj().T, prm.inverse_matrix)
+                    self.assertAllClose(prm.matrix().conj().T @ prm.matrix(), identity_matrix)
+                    self.assertAllClose(prm.matrix().conj().T, prm.inverse_matrix())
 
 
 class TMLayerTest(tf.test.TestCase):
@@ -90,8 +91,8 @@ class TMLayerTest(tf.test.TestCase):
                         hadamard=hadamard,
                         bs_error=bs_error
                     )
-                    self.assertAllClose(tm.matrix.conj().T @ tm.matrix, identity_matrix)
-                    self.assertAllClose(tm.matrix.conj().T, tm.inverse_matrix)
+                    self.assertAllClose(tm.matrix().conj().T @ tm.matrix(), identity_matrix)
+                    self.assertAllClose(tm.matrix().conj().T, tm.inverse_matrix())
 
 
 class BMLayerTest(tf.test.TestCase):
@@ -118,8 +119,8 @@ class BMLayerTest(tf.test.TestCase):
                         hadamard=hadamard,
                         bs_error=bs_error
                     )
-                    self.assertAllClose(bm.matrix.conj().T @ bm.matrix, identity_matrix)
-                    self.assertAllClose(bm.matrix.conj().T, bm.inverse_matrix)
+                    self.assertAllClose(bm.matrix().conj().T @ bm.matrix(), identity_matrix)
+                    self.assertAllClose(bm.matrix().conj().T, bm.inverse_matrix())
 
 
 class CorrespondenceTest(tf.test.TestCase):
@@ -167,14 +168,14 @@ class CorrespondenceTest(tf.test.TestCase):
                     )
                     test_correspondence(self, bm_np)
 
-
+@pytest.mark.skip(reason="helper function")
 def test_correspondence(test_case: tf.test.TestCase, np_layer: MeshNumpyLayer):
     # set the testing to true and rebuild layer!
     np_layer._setup(None, testing=True)
     tf_layer = MeshLayer(np_layer.mesh.model)
     t_layer = MeshTorchLayer(np_layer.mesh.model)
     test_case.assertAllClose(tf_layer.matrix, np_layer.matrix)
-    test_case.assertAllClose(t_layer.matrix, np_layer.matrix)
+    test_case.assertAllClose(t_layer.matrix(), np_layer.matrix)
     test_case.assertAllClose(tf_layer.matrix.conj().T, np_layer.inverse_matrix)
 
 

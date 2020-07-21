@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional, Callable
 
 import torch
 from torch.nn import Module, Parameter
@@ -29,18 +29,16 @@ class TransformerLayer(Module):
     def inverse_transform(self, outputs: torch.Tensor) -> torch.Tensor:
         return outputs
 
-    @property
     def matrix(self) -> np.ndarray:
         torch_matrix = self.transform(np.eye(self.units, dtype=np.complex64)).cpu().detach().numpy()
         return torch_matrix[0] + 1j * torch_matrix[1]
 
-    @property
     def inverse_matrix(self):
         torch_matrix = self.inverse_transform(np.eye(self.units, dtype=np.complex64)).cpu().detach().numpy()
         return torch_matrix[0] + 1j * torch_matrix[1]
 
     def plot(self, plt):
-        plot_complex_matrix(plt, self.matrix)
+        plot_complex_matrix(plt, self.matrix())
 
     def forward(self, x):
         return self.transform(x)
@@ -245,18 +243,29 @@ class MeshPhasesTorch:
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
+        fixed_theta: The fixed theta values to set at (1 - mask)
+        fixed_phi: The fixed phi values to set at (1 - mask)
+        phase_loss_fn: Incorporate phase shift-dependent loss into the model.
+                        The function is of the form phase_loss_fn(phases),
+                        which returns the loss
     """
 
     def __init__(self, theta: Parameter, phi: Parameter, mask: np.ndarray, gamma: Parameter, units: int,
-                 basis: str = SINGLEMODE, hadamard: bool = False):
+                 basis: str = SINGLEMODE, hadamard: bool = False,
+                 fixed_theta: Optional[np.ndarray] = None, fixed_phi: Optional[np.ndarray] = None,
+                 phase_loss_fn: Optional[Callable[[torch.Tensor], torch.Tensor]] = None):
         self.mask = mask if mask is not None else np.ones_like(theta)
         torch_mask = torch.as_tensor(mask, dtype=theta.dtype, device=theta.device)
         torch_inv_mask = torch.as_tensor(1 - mask, dtype=theta.dtype, device=theta.device)
-        self.theta = MeshParamTorch(theta * torch_mask + torch_inv_mask * (1 - hadamard) * np.pi, units=units)
-        self.phi = MeshParamTorch(phi * torch_mask + torch_inv_mask * (1 - hadamard) * np.pi, units=units)
+        fixed_theta = (1 - hadamard) * np.pi if not fixed_theta else torch.as_tensor(fixed_theta)
+        fixed_phi = (1 - hadamard) * np.pi if not fixed_phi else torch.as_tensor(fixed_phi)
+        self.theta = MeshParamTorch(theta * torch_mask + torch_inv_mask * fixed_theta, units=units)
+        self.phi = MeshParamTorch(phi * torch_mask + torch_inv_mask * fixed_phi, units=units)
         self.gamma = gamma
         self.basis = basis
-        self.input_phase_shift_layer = phasor(gamma)
+        self.phase_fn = lambda phase: rc_mul(torch.as_tensor(1 - phase_loss_fn(phase)),
+                                             phasor(phase)) if phase_loss_fn is not None else phasor(phase)
+        self.input_phase_shift_layer = self.phase_fn(gamma)
         if self.theta.param.shape != self.phi.param.shape:
             raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
 
@@ -288,6 +297,24 @@ class MeshPhasesTorch:
         else:
             raise NotImplementedError(f"{self.basis} is not yet supported or invalid.")
 
+    @property
+    def internal_phase_shift_layers(self):
+        """Elementwise applying complex exponential to :code:`internal_phase_shifts`.
+
+        Returns:
+            Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
+        """
+        return self.phase_fn(self.internal_phase_shifts)
+
+    @property
+    def external_phase_shift_layers(self):
+        """Elementwise applying complex exponential to :code:`external_phase_shifts`.
+
+        Returns:
+            External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
+        """
+        return self.phase_fn(self.external_phase_shifts)
+
 
 class MeshTorchLayer(TransformerLayer):
     """Mesh network layer for unitary operators implemented in numpy
@@ -301,7 +328,7 @@ class MeshTorchLayer(TransformerLayer):
         self.mesh_model = mesh_model
         ss, cs, sc, cc = self.mesh_model.mzi_error_tensors
         ss, cs, sc, cc = torch.as_tensor(ss, dtype=torch.float32), torch.as_tensor(cs, dtype=torch.float32), \
-                             torch.as_tensor(sc, dtype=torch.float32), torch.as_tensor(cc, dtype=torch.float32)
+                         torch.as_tensor(sc, dtype=torch.float32), torch.as_tensor(cc, dtype=torch.float32)
         self.register_buffer("ss", ss)
         self.register_buffer("cs", cs)
         self.register_buffer("sc", sc)
@@ -393,8 +420,8 @@ class MeshTorchLayer(TransformerLayer):
         Returns:
             List of mesh layers to be used by any instance of :code:`MeshLayer`
         """
-        internal_psl = phasor(phases.internal_phase_shifts)
-        external_psl = phasor(phases.external_phase_shifts)
+        internal_psl = phases.internal_phase_shift_layers
+        external_psl = phases.external_phase_shift_layers
 
         # smooth trick to efficiently perform the layerwise coupling computation
 

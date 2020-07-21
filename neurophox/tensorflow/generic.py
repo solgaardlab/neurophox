@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Callable
 
 import tensorflow as tf
 from tensorflow.keras.layers import Layer, Activation
@@ -286,7 +286,8 @@ class MeshParamTensorflow:
 
         In particular, given the :code:`param` array
         :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
-        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`, the common-mode arrangement has the stripe array form
+        where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`,
+        the common-mode arrangement has the stripe array form
         :math:`\\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{\\theta}_N]^T`.
         where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\boldsymbol{\\theta}` of the final mesh.
 
@@ -337,15 +338,27 @@ class MeshPhasesTensorflow:
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
+        fixed_theta: The fixed theta values to set at (1 - mask)
+        fixed_phi: The fixed phi values to set at (1 - mask)
+        phase_loss_fn: Incorporate phase shift-dependent loss into the model.
+                        The function is of the form phase_loss_fn(phases),
+                        which returns the loss
+
     """
     def __init__(self, theta: tf.Variable, phi: tf.Variable, mask: np.ndarray, gamma: tf.Variable, units: int,
-                 basis: str = SINGLEMODE, hadamard: bool = False):
+                 basis: str = SINGLEMODE, hadamard: bool = False,
+                 fixed_theta: Optional[np.ndarray] = None, fixed_phi: Optional[np.ndarray] = None,
+                 phase_loss_fn: Optional[Callable[[tf.Tensor], tf.Tensor]] = None):
         self.mask = mask if mask is not None else np.ones_like(theta)
-        self.theta = MeshParamTensorflow(theta * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
-        self.phi = MeshParamTensorflow(phi * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
+        fixed_theta = (1 - hadamard) * np.pi if not fixed_theta else fixed_theta
+        fixed_phi = (1 - hadamard) * np.pi if not fixed_phi else fixed_phi
+        self.theta = MeshParamTensorflow(theta * mask + (1 - mask) * fixed_theta, units=units)
+        self.phi = MeshParamTensorflow(phi * mask + (1 - mask) * fixed_phi, units=units)
         self.gamma = gamma
         self.basis = basis
-        self.input_phase_shift_layer = tf.complex(tf.cos(gamma), tf.sin(gamma))
+        self.phase_loss_fn = (lambda x: 0) if phase_loss_fn is None else phase_loss_fn
+        self.phase_fn = lambda phase: tf.complex(tf.cos(phase), tf.sin(phase)) * (1 - self.phase_loss_fn(phase))
+        self.input_phase_shift_layer = self.phase_fn(gamma)
         if self.theta.param.shape != self.phi.param.shape:
             raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
 
@@ -386,8 +399,7 @@ class MeshPhasesTensorflow:
         Returns:
             Internal phase shift layers corresponding to :math:`\\boldsymbol{\\theta}`
         """
-        internal_ps = self.internal_phase_shifts
-        return tf.complex(tf.cos(internal_ps), tf.sin(internal_ps))
+        return self.phase_fn(self.internal_phase_shifts)
 
     @property
     def external_phase_shift_layers(self):
@@ -396,8 +408,7 @@ class MeshPhasesTensorflow:
         Returns:
             External phase shift layers corresponding to :math:`\\boldsymbol{\\phi}`
         """
-        external_ps = self.external_phase_shifts
-        return tf.complex(tf.cos(external_ps), tf.sin(external_ps))
+        return self.phase_fn(self.external_phase_shifts)
 
 
 class Mesh:
