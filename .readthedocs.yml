@@ -1,11 +1,7 @@
 version: 2
 
-python:
-  version: 3.6
-  install:
-    - requirements: doc/requirements.txt
-    - method: setuptools
-      path: .
+conda:
+  environment: .conda.yml
 
 sphinx:
   builder: html
