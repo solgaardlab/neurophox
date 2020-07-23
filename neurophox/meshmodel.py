@@ -10,7 +10,7 @@ except ImportError:
 from .helpers import butterfly_permutation, grid_permutation, to_stripe_array, prm_permutation, \
     get_efficient_coarse_grain_block_sizes, get_default_coarse_grain_block_sizes
 from .initializers import get_initializer, MeshPhaseInitializer, PhaseInitializer
-from .config import BLOCH, TF_COMPLEX, TEST_SEED
+from .config import BLOCH, TEST_SEED
 
 
 class MeshModel:
@@ -24,15 +24,17 @@ class MeshModel:
         testing: Use a seed for randomizing error (ignore for pure machine learning applications)
         use_different_errors: Use different errors for the left and right beamsplitter errors
         theta_init: Initializer for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
-                    a `str`, `ndarray`, or tuple of the form `(theta_init, theta_mask)`.
+                    a `str`, `ndarray`, or tuple of the form `(theta_init, theta_fn)`.
                     Specifying `theta_mask` means the arg num_tunable will be ignored
                     and you have to handle that case yourself.
         phi_init: Initializer for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`):
-                  a `str`, `ndarray`, or tuple of the form `(phi_init, phi_mask)`.
+                  a `str`, `ndarray`, or tuple of the form `(phi_init, phi_fn)`.
                   Specifying `phi_mask` means the arg num_tunable will be ignored and you have to handle that case
                   yourself.
         gamma_init: Initializer for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`):
-                    a `str` or an ndarray containing the initial value for gamma.
+                    a `str`, `ndarray`, or tuple of the form `(gamma_init, gamma_fn)`.
+                    Specifying `gamma_mask` means the arg num_tunable will be ignored and you have to handle that case
+                    yourself.
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
     """
 
@@ -50,11 +52,9 @@ class MeshModel:
         self.testing = testing
         self.use_different_errors = use_different_errors
         self.mask = np.zeros((self.num_layers, self.units // 2))
-        self.theta_init, self.theta_mask = (theta_init, None) if not isinstance(theta_init, tuple) else theta_init
-        self.phi_init, self.phi_mask = (phi_init, None) if not isinstance(phi_init, tuple) else phi_init
-        self.fixed_theta = (self.theta_init, self.theta_mask) if self.theta_mask is not None else None
-        self.fixed_phi = (self.phi_init, self.phi_mask) if self.phi_mask is not None else None
-        self.gamma_init = gamma_init
+        self.theta_init, self.theta_fn = (theta_init, None) if not isinstance(theta_init, tuple) else theta_init
+        self.phi_init, self.phi_fn = (phi_init, None) if not isinstance(phi_init, tuple) else phi_init
+        self.gamma_init, self.gamma_fn = (gamma_init, None) if not isinstance(gamma_init, tuple) else gamma_init
         self.basis = basis
         for layer in range(self.num_layers):
             self.mask[layer][:int(self.num_tunable[layer])] = 1
@@ -68,11 +68,11 @@ class MeshModel:
         Returns:
             Numpy arrays or Tensorflow variables corresponding to :math:`\\boldsymbol{\\theta}, \\boldsymbol{\\phi}, \gamma_n`.
         """
-        if self.theta_mask is None and not isinstance(self.theta_init, np.ndarray):
+        if not isinstance(self.theta_init, np.ndarray):
             theta_init = get_initializer(self.units, self.num_layers, self.theta_init, self.hadamard, self.testing)
         else:
             theta_init = PhaseInitializer(self.theta_init, self.units)
-        if self.phi_mask is None and not isinstance(self.phi_init, np.ndarray):
+        if not isinstance(self.phi_init, np.ndarray):
             phi_init = get_initializer(self.units, self.num_layers, self.phi_init, self.hadamard, self.testing)
         else:
             phi_init = PhaseInitializer(self.phi_init, self.units)

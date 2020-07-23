@@ -339,14 +339,11 @@ class MeshPhasesTensorflow:
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
-        theta_fn: Pytorch-friendly phi function call to reparametrize phi (example use cases:
-                can use a mask to keep some values of theta fixed or always bound theta between 0 and pi).
+        theta_fn: TF-friendly phi function call to reparametrize phi (example use cases: see `neurophox.helpers`).
                 By default, use identity function.
-        phi_fn: Pytorch-friendly phi function call to reparametrize phi (example use cases:
-                can use a mask to keep some values of phi fixed or always bound phi between 0 and 2 * pi).
+        phi_fn: TF-friendly phi function call to reparametrize phi (example use cases: see `neurophox.helpers`).
                 By default, use identity function.
-        gamma_fn: Pytorch-friendly gamma function call to reparametrize gamma (example use cases:
-                  can use a mask to keep some values of gamma fixed or always bound gamma between 0 and 2 * pi).
+        gamma_fn: TF-friendly gamma function call to reparametrize gamma (example use cases: see `neurophox.helpers`).
         phase_loss_fn: Incorporate phase shift-dependent loss into the model.
                         The function is of the form phase_loss_fn(phases),
                         which returns the loss
@@ -496,7 +493,6 @@ class MeshLayer(TransformerLayer):
         super(MeshLayer, self).__init__(self.units, activation=activation, **kwargs)
         theta_init, phi_init, gamma_init = self.mesh.model.init()
         self.theta, self.phi, self.gamma = theta_init.to_tf("theta"), phi_init.to_tf("phi"), gamma_init.to_tf("gamma")
-        self.fixed_theta, self.fixed_phi = self.mesh.model.fixed_theta, self.mesh.model.fixed_phi
 
     @tf.function
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:
