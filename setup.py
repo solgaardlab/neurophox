@@ -12,7 +12,7 @@ requirements = [
 
 setup(
     name=project_name,
-    version="0.1.0-alpha.5",
+    version="0.1.0-beta.0",
     packages=find_packages(),
     description='A simulation framework for unitary neural networks and photonic devices',
     author='Sunil Pai',
@@ -20,7 +20,7 @@ setup(
     license='MIT',
     url="https://github.com/solgaardlab/neurophox",
     classifiers=(
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 3 - Beta',
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'License :: OSI Approved :: MIT License',

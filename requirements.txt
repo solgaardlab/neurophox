@@ -1,4 +1,4 @@
-numpy
+numpy>=1.16
 scipy
-tensorflow
-torch
+tensorflow>=2.2.0
+torch>=1.7

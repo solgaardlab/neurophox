@@ -40,7 +40,7 @@ matplotlib
 tensorflow>=2.0.0a
 ```
 
-Optionally, the user may install `torch>=1.3` to run the Pytorch layers.
+Optionally, the user may install `torch>=1.7` to run the Pytorch layers.
 
 ## Getting started
 
