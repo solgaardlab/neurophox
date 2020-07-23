@@ -48,6 +48,8 @@ class MeshModel:
         self.mask = np.zeros((self.num_layers, self.units // 2))
         self.theta_init, self.theta_mask = (theta_init, None) if isinstance(theta_init, str) else theta_init
         self.phi_init, self.phi_mask = (phi_init, None) if isinstance(phi_init, str) else phi_init
+        self.fixed_theta = self.theta_init if self.theta_mask is not None else None
+        self.fixed_phi = self.phi_init if self.phi_mask is not None else None
         self.gamma_init = gamma_init
         self.basis = basis
         for layer in range(self.num_layers):
