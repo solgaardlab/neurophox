@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Union
+from typing import Optional, List, Dict, Union, Callable
 
 import tensorflow as tf
 from tensorflow.keras.layers import Activation
@@ -26,14 +26,16 @@ class RM(MeshLayer):
     """
 
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, incoherent: bool = False,
-                 basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init: Union[str, tuple] = "haar_rect",
-                 phi_init: Union[str, tuple] = "random_phi", gamma_init: Union[str, tuple] = "random_gamma",
-                 include_diagonal_phases: bool = True, activation: Activation = None, **kwargs):
+                 basis: str = DEFAULT_BASIS, bs_error: float = 0.0,
+                 theta_init: Union[str, tuple, np.ndarray] = "haar_rect",
+                 phi_init: Union[str, tuple, np.ndarray] = "random_phi",
+                 gamma_init: Union[str, tuple, np.ndarray] = "random_gamma",
+                 phase_loss_fn: Optional[Callable[[tf.Tensor], tf.Tensor]] = None,
+                 activation: Activation = None, **kwargs):
         super(RM, self).__init__(
-            RectangularMeshModel(units, num_layers, hadamard, bs_error, basis,
-                                 theta_init, phi_init, gamma_init),
-            activation=activation, incoherent=incoherent, include_diagonal_phases=include_diagonal_phases, **kwargs
+            RectangularMeshModel(units, num_layers, hadamard, bs_error, basis, theta_init, phi_init, gamma_init),
+            activation=activation, incoherent=incoherent,
+            phase_loss_fn=phase_loss_fn, **kwargs
         )
 
 
@@ -52,13 +54,14 @@ class TM(MeshLayer):
     """
 
     def __init__(self, units: int, hadamard: bool = False, incoherent: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init: Union[str, tuple] = "haar_tri",
-                 phi_init: Union[str, tuple] = "random_phi", gamma_init: Union[str, tuple] = "random_gamma",
+                 bs_error: float = 0.0, theta_init: Union[str, tuple, np.ndarray] = "haar_tri",
+                 phi_init: Union[str, tuple, np.ndarray] = "random_phi",
+                 gamma_init: Union[str, tuple, np.ndarray] = "random_gamma",
+                 phase_loss_fn: Optional[Callable[[tf.Tensor], tf.Tensor]] = None,
                  activation: Activation = None, **kwargs):
         super(TM, self).__init__(
-            TriangularMeshModel(units, hadamard, bs_error, basis,
-                                theta_init, phi_init, gamma_init),
-            activation=activation, incoherent=incoherent, **kwargs
+            TriangularMeshModel(units, hadamard, bs_error, basis, theta_init, phi_init, gamma_init),
+            activation=activation, incoherent=incoherent, phase_loss_fn=phase_loss_fn, **kwargs
         )
 
 
@@ -81,16 +84,17 @@ class PRM(MeshLayer):
     def __init__(self, units: int, tunable_layers_per_block: int = None,
                  num_tunable_layers_list: Optional[List[int]] = None, sampling_frequencies: Optional[List[int]] = None,
                  bs_error: float = 0.0, hadamard: bool = False, incoherent: bool = False,
-                 theta_init: Union[str, tuple] = "haar_prm", phi_init: Union[str, tuple] = "random_phi",
-                 gamma_init: Union[str, tuple] = "random_gamma", activation: Activation = None, **kwargs):
+                 theta_init: Union[str, tuple, np.ndarray] = "haar_prm",
+                 phi_init: Union[str, tuple, np.ndarray] = "random_phi",
+                 gamma_init: Union[str, tuple, np.ndarray] = "random_gamma",
+                 phase_loss_fn: Optional[Callable[[tf.Tensor], tf.Tensor]] = None,
+                 activation: Activation = None, **kwargs):
         if theta_init == 'haar_prm' and tunable_layers_per_block is not None:
             raise NotImplementedError('haar_prm initializer is incompatible with setting tunable_layers_per_block.')
         super(PRM, self).__init__(
             PermutingRectangularMeshModel(units, tunable_layers_per_block, num_tunable_layers_list,
-                                          sampling_frequencies, bs_error, hadamard,
-                                          theta_init, phi_init, gamma_init),
-            activation=activation, incoherent=incoherent, **kwargs
-        )
+                                          sampling_frequencies, bs_error, hadamard, theta_init, phi_init, gamma_init),
+            activation=activation, incoherent=incoherent, phase_loss_fn=phase_loss_fn, **kwargs)
 
 
 class BM(MeshLayer):
@@ -107,12 +111,13 @@ class BM(MeshLayer):
     """
 
     def __init__(self, num_layers: int, hadamard: bool = False, incoherent: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init: Union[str, tuple] = "random_theta",
-                 phi_init: Union[str, tuple] = "random_phi",
+                 bs_error: float = 0.0, theta_init: Union[str, tuple, np.ndarray] = "random_theta",
+                 phi_init: Union[str, tuple, np.ndarray] = "random_phi",
+                 phase_loss_fn: Optional[Callable[[tf.Tensor], tf.Tensor]] = None,
                  activation: Activation = None, **kwargs):
         super(BM, self).__init__(
             ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init, phi_init),
-            activation=activation, incoherent=incoherent, **kwargs
+            activation=activation, incoherent=incoherent, phase_loss_fn=phase_loss_fn, **kwargs
         )
 
 

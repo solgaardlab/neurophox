@@ -1,6 +1,9 @@
 from typing import Optional, Callable, Tuple
 
 import numpy as np
+import tensorflow as tf
+import torch
+
 from .components import BlochMZI
 from scipy.stats import multivariate_normal
 
@@ -313,3 +316,32 @@ def neurophox_matplotlib_setup(plt):
     # plt.rc('font', **{'family': 'serif', 'serif': ['Charter']})
     # plt.rcParams['mathtext.fontset'] = 'dejavuserif'
     plt.rcParams.update({'text.latex.preamble': [r'\usepackage{siunitx}', r'\usepackage{amsmath}']})
+
+# Phase functions
+
+
+def fix_phase_tf(fixed, mask):
+    return lambda tensor: mask * tensor + (1 - mask) * fixed
+
+
+def fix_phase_torch(fixed: np.ndarray, mask: np.ndarray, dtype: torch.dtype, device: torch.device):
+    mask = torch.as_tensor(mask, dtype=dtype, device=device)
+    fixed = torch.as_tensor(fixed, dtype=dtype, device=device)
+    return lambda tensor: tensor * mask + (1 - mask) * fixed
+
+
+def tri_phase_tf(phase_range: float):
+    def pcf(phase):
+        phase = tf.math.mod(phase, 2 * phase_range)
+        phase = tf.where(tf.greater(phase, np.pi),
+                         2 * phase_range * tf.ones_like(phase) - phase, phase)
+        return phase
+    return pcf
+
+
+def tri_phase_torch(phase_range: float):
+    def pcf(phase):
+        phase = torch.fmod(phase, 2 * phase_range)
+        phase[phase > phase_range] = 2 * phase_range - phase[phase > phase_range]
+        return phase
+    return pcf

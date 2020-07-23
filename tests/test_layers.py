@@ -171,7 +171,7 @@ class CorrespondenceTest(tf.test.TestCase):
 @pytest.mark.skip(reason="helper function")
 def test_correspondence(test_case: tf.test.TestCase, np_layer: MeshNumpyLayer):
     # set the testing to true and rebuild layer!
-    np_layer._setup(None, testing=True)
+    np_layer._setup(testing=True)
     tf_layer = MeshLayer(np_layer.mesh.model)
     t_layer = MeshTorchLayer(np_layer.mesh.model)
     test_case.assertAllClose(tf_layer.matrix, np_layer.matrix)

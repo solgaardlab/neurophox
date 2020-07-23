@@ -27,10 +27,10 @@ def run_parallel_nullification(np_layer):
             current_mesh = MeshNumpyLayer(
                 MeshModel(perm_idx=perm_idx[layer + 1:],
                           num_tunable=num_tunable[layer + 1:],
-                          basis='sm'),
-                phases=MeshPhases(theta=np.asarray(theta),
-                                  phi=np.asarray(phi),
-                                  gamma=np.zeros_like(np_layer.phases.gamma))
+                          basis='sm',
+                          theta_init=np.asarray(theta),
+                          phi_init=np.asarray(phi),
+                          gamma_init=np.zeros_like(np_layer.phases.gamma))
             )
             layer_trm = current_mesh.inverse_transform(nullification_set[layer]).squeeze()
         else:
@@ -42,10 +42,10 @@ def run_parallel_nullification(np_layer):
     return MeshNumpyLayer(
         MeshModel(perm_idx=perm_idx,
                   num_tunable=num_tunable,
-                  basis='sm'),
-        phases=MeshPhases(theta=np.asarray(theta),
-                          phi=np.asarray(phi),
-                          gamma=np_layer.phases.gamma)
+                  basis='sm',
+                  theta_init=np.asarray(theta),
+                  phi_init=np.asarray(phi),
+                  gamma_init=np_layer.phases.gamma.copy())
     )
 
 

@@ -366,6 +366,10 @@ class MeshPhases:
                           self.mask,
                           self.gamma - other_rm_mesh_phases.gamma)
 
+    @property
+    def params(self):
+        return self.theta.param, self.phi.param, self.gamma
+
 
 class MeshNumpy:
     """
@@ -454,25 +458,18 @@ class MeshNumpyLayer(TransformerNumpyLayer):
 
     Args:
         mesh_model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
-        phases: The MeshPhases control parameters for the mesh
     """
 
-    def __init__(self, mesh_model: MeshModel, phases: Optional[MeshPhases] = None,
-                  phase_loss_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None):
+    def __init__(self, mesh_model: MeshModel, phase_loss_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None):
         self.mesh = MeshNumpy(mesh_model)
         self.phase_loss_fn = phase_loss_fn
-        self._setup(phases)
+        self._setup()
         super(MeshNumpyLayer, self).__init__(self.units)
 
-    def _setup(self, phases, testing: bool = False):
+    def _setup(self, testing: bool = False):
         self.mesh.model.testing = testing
-        if phases is None:
-            theta_init, phi_init, gamma_init = self.mesh.model.init()
-            self.theta, self.phi, self.gamma = theta_init.to_np(), phi_init.to_np(), gamma_init.to_np()
-        else:
-            if self.mesh.num_layers != phases.theta.param.shape[0]:
-                raise ValueError("num_layers must be specified to match input phases.")
-            self.theta, self.phi, self.gamma = phases.theta.param, phases.phi.param, phases.gamma
+        theta_init, phi_init, gamma_init = self.mesh.model.init()
+        self.theta, self.phi, self.gamma = theta_init.to_np(), phi_init.to_np(), gamma_init.to_np()
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
         self.internal_phase_shift_layers = self.phases.internal_phase_shift_layers.T
         self.external_phase_shift_layers = self.phases.external_phase_shift_layers.T

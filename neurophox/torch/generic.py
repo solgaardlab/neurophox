@@ -243,34 +243,32 @@ class MeshPhasesTorch:
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
-        fixed_theta: The fixed theta values to set at (1 - mask)
-        fixed_phi: The fixed phi values to set at (1 - mask)
-        theta_mask: The theta mask for fixed_theta, overrides mask
-        phi_mask: The phi mask for fixed_phi, overrides mask
+        theta_fn: Pytorch-friendly phi function call to reparametrize phi (example use cases:
+                can use a mask to keep some values of theta fixed or always bound theta between 0 and pi).
+                By default, use identity function.
+        phi_fn: Pytorch-friendly phi function call to reparametrize phi (example use cases:
+                can use a mask to keep some values of phi fixed or always bound phi between 0 and 2 * pi).
+                By default, use identity function.
+        gamma_fn: Pytorch-friendly gamma function call to reparametrize gamma (example use cases:
+                  can use a mask to keep some values of gamma fixed or always bound gamma between 0 and 2 * pi).
+                  By default, use identity function.
         phase_loss_fn: Incorporate phase shift-dependent loss into the model.
                         The function is of the form phase_loss_fn(phases),
                         which returns the loss
     """
 
     def __init__(self, theta: Parameter, phi: Parameter, mask: np.ndarray, gamma: Parameter, units: int,
-                 basis: str = SINGLEMODE, hadamard: bool = False,
-                 fixed_theta: Optional[np.ndarray] = None, fixed_phi: Optional[np.ndarray] = None,
+                 basis: str = SINGLEMODE, hadamard: bool = False, theta_fn: Optional[Callable] = None,
+                 phi_fn: Optional[Callable] = None, gamma_fn: Optional[Callable] = None,
                  phase_loss_fn: Optional[Callable[[torch.Tensor], torch.Tensor]] = None):
         self.mask = mask if mask is not None else np.ones_like(theta)
-        torch_mask = torch.as_tensor(mask, dtype=theta.dtype, device=theta.device)
-        if fixed_theta is None:
-            fixed_theta, theta_mask = (1 - hadamard) * np.pi, torch_mask
-        else:
-            fixed_theta, theta_mask = torch.as_tensor(fixed_theta[0], dtype=theta.dtype, device=theta.device), \
-                                      torch.as_tensor(fixed_theta[1], dtype=theta.dtype, device=theta.device)
-        if fixed_phi is None:
-            fixed_phi, phi_mask = (1 - hadamard) * np.pi, torch_mask
-        else:
-            fixed_phi, phi_mask = torch.as_tensor(fixed_phi[0], dtype=phi.dtype, device=phi.device), \
-                                  torch.as_tensor(fixed_phi[1], dtype=phi.dtype, device=phi.device)
-        self.theta = MeshParamTorch(theta * theta_mask + (1 - theta_mask) * fixed_theta, units=units)
-        self.phi = MeshParamTorch(phi * phi_mask + (1 - phi_mask) * fixed_phi, units=units)
-        self.gamma = gamma
+        mask = torch.as_tensor(mask, dtype=theta.dtype, device=theta.device)
+        self.theta_fn = (lambda x: x) if theta_fn is None else theta_fn
+        self.phi_fn = (lambda x: x) if phi_fn is None else phi_fn
+        self.gamma_fn = (lambda x: x) if gamma_fn is None else gamma_fn
+        self.theta = MeshParamTorch(self.theta_fn(theta) * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
+        self.phi = MeshParamTorch(self.phi_fn(phi) * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
+        self.gamma = self.gamma_fn(gamma)
         self.basis = basis
         self.phase_fn = lambda phase: rc_mul(torch.as_tensor(1 - phase_loss_fn(phase)),
                                              phasor(phase)) if phase_loss_fn is not None else phasor(phase)

@@ -298,7 +298,7 @@ class MeshParamTensorflow:
 
         """
         phases = self.single_mode_arrangement
-        return phases + roll_tensor(phases)
+        return phases + _roll_tensor(phases)
 
     @property
     def differential_mode_arrangement(self) -> tf.Tensor:
@@ -317,7 +317,7 @@ class MeshParamTensorflow:
 
         """
         phases = self.single_mode_arrangement
-        return phases / 2 - roll_tensor(phases / 2)
+        return phases / 2 - _roll_tensor(phases / 2)
 
     def __add__(self, other):
         return MeshParamTensorflow(self.param + other.param, self.units)
@@ -339,10 +339,14 @@ class MeshPhasesTensorflow:
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
-        fixed_theta: Tuple of the form `(theta, tmask)` of :math:`\\boldsymbol{\\theta}` values
-                    to set at `(1 - tmask)` (overrides mask)
-        fixed_phi: The fixed `(phi, pmask)` of :math:`\\boldsymbol{\\phi}` values
-                    to set at `(1 - pmask)` (overrides mask)
+        theta_fn: Pytorch-friendly phi function call to reparametrize phi (example use cases:
+                can use a mask to keep some values of theta fixed or always bound theta between 0 and pi).
+                By default, use identity function.
+        phi_fn: Pytorch-friendly phi function call to reparametrize phi (example use cases:
+                can use a mask to keep some values of phi fixed or always bound phi between 0 and 2 * pi).
+                By default, use identity function.
+        gamma_fn: Pytorch-friendly gamma function call to reparametrize gamma (example use cases:
+                  can use a mask to keep some values of gamma fixed or always bound gamma between 0 and 2 * pi).
         phase_loss_fn: Incorporate phase shift-dependent loss into the model.
                         The function is of the form phase_loss_fn(phases),
                         which returns the loss
@@ -350,20 +354,19 @@ class MeshPhasesTensorflow:
     """
     def __init__(self, theta: tf.Variable, phi: tf.Variable, mask: np.ndarray, gamma: tf.Variable, units: int,
                  basis: str = SINGLEMODE, hadamard: bool = False,
-                 fixed_theta: Optional[Tuple[np.ndarray, np.ndarray]] = None,
-                 fixed_phi: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+                 theta_fn: Optional[Callable] = None, phi_fn: Optional[Callable] = None,
+                 gamma_fn: Optional[Callable] = None,
                  phase_loss_fn: Optional[Callable[[tf.Tensor], tf.Tensor]] = None):
         self.mask = mask if mask is not None else np.ones_like(theta)
-
-        fixed_theta, tmask = (1 - hadamard) * np.pi, mask if fixed_theta is None else fixed_theta
-        fixed_phi, pmask = (1 - hadamard) * np.pi, mask if fixed_phi is None else fixed_phi
-
-        self.theta = MeshParamTensorflow(theta * tmask + (1 - tmask) * fixed_theta, units=units)
-        self.phi = MeshParamTensorflow(phi * pmask + (1 - pmask) * fixed_phi, units=units)
-        self.gamma = gamma
+        self.theta_fn = (lambda x: x) if theta_fn is None else theta_fn
+        self.phi_fn = (lambda x: x) if phi_fn is None else phi_fn
+        self.gamma_fn = (lambda x: x) if gamma_fn is None else gamma_fn
+        self.theta = MeshParamTensorflow(self.theta_fn(theta) * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
+        self.phi = MeshParamTensorflow(self.phi_fn(phi) * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
+        self.gamma = self.gamma_fn(gamma)
         self.basis = basis
         self.phase_loss_fn = (lambda x: 0) if phase_loss_fn is None else phase_loss_fn
-        self.phase_fn = lambda phase: tf.complex(tf.cos(phase), tf.sin(phase)) * (1 - self.phase_loss_fn(phase))
+        self.phase_fn = lambda phase: tf.complex(tf.cos(phase), tf.sin(phase)) * (1 - _to_complex(self.phase_loss_fn(phase)))
         self.input_phase_shift_layer = self.phase_fn(gamma)
         if self.theta.param.shape != self.phi.param.shape:
             raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
@@ -446,18 +449,18 @@ class Mesh:
         # smooth trick to efficiently perform the layerwise coupling computation
 
         if self.model.hadamard:
-            s11 = (self.cc * internal_psl + self.ss * roll_tensor(internal_psl, up=True))
-            s22 = roll_tensor(self.ss * internal_psl + self.cc * roll_tensor(internal_psl, up=True))
-            s12 = roll_tensor(self.cs * internal_psl - self.sc * roll_tensor(internal_psl, up=True))
-            s21 = (self.sc * internal_psl - self.cs * roll_tensor(internal_psl, up=True))
+            s11 = (self.cc * internal_psl + self.ss * _roll_tensor(internal_psl, up=True))
+            s22 = _roll_tensor(self.ss * internal_psl + self.cc * _roll_tensor(internal_psl, up=True))
+            s12 = _roll_tensor(self.cs * internal_psl - self.sc * _roll_tensor(internal_psl, up=True))
+            s21 = (self.sc * internal_psl - self.cs * _roll_tensor(internal_psl, up=True))
         else:
-            s11 = (self.cc * internal_psl - self.ss * roll_tensor(internal_psl, up=True))
-            s22 = roll_tensor(-self.ss * internal_psl + self.cc * roll_tensor(internal_psl, up=True))
-            s12 = 1j * roll_tensor(self.cs * internal_psl + self.sc * roll_tensor(internal_psl, up=True))
-            s21 = 1j * (self.sc * internal_psl + self.cs * roll_tensor(internal_psl, up=True))
+            s11 = (self.cc * internal_psl - self.ss * _roll_tensor(internal_psl, up=True))
+            s22 = _roll_tensor(-self.ss * internal_psl + self.cc * _roll_tensor(internal_psl, up=True))
+            s12 = 1j * _roll_tensor(self.cs * internal_psl + self.sc * _roll_tensor(internal_psl, up=True))
+            s21 = 1j * (self.sc * internal_psl + self.cs * _roll_tensor(internal_psl, up=True))
 
         diag_layers = external_psl * (s11 + s22) / 2
-        off_diag_layers = roll_tensor(external_psl) * (s21 + s12) / 2
+        off_diag_layers = _roll_tensor(external_psl) * (s21 + s12) / 2
 
         if self.units % 2:
             diag_layers = tf.concat((diag_layers[:-1], tf.ones_like(diag_layers[-1:])), axis=0)
@@ -478,14 +481,18 @@ class MeshLayer(TransformerLayer):
     Args:
         mesh_model: The `MeshModel` model of the mesh network (e.g., rectangular, triangular, custom, etc.)
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
+        incoherent: Use an incoherent representation for the layer (no phase coherent between respective inputs...)
+        phases: Initialize with phases (overrides mesh model initialization)
     """
 
     def __init__(self, mesh_model: MeshModel, activation: Activation = None,
-                 include_diagonal_phases: bool = True, incoherent: bool = False, **kwargs):
+                 incoherent: bool = False,
+                 phase_loss_fn: Optional[Callable[[tf.Tensor], tf.Tensor]] = None,
+                 **kwargs):
         self.mesh = Mesh(mesh_model)
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
-        self.include_diagonal_phases = include_diagonal_phases
         self.incoherent = incoherent
+        self.phase_loss_fn = phase_loss_fn
         super(MeshLayer, self).__init__(self.units, activation=activation, **kwargs)
         theta_init, phi_init, gamma_init = self.mesh.model.init()
         self.theta, self.phi, self.gamma = theta_init.to_tf("theta"), phi_init.to_tf("phi"), gamma_init.to_tf("gamma")
@@ -509,7 +516,7 @@ class MeshLayer(TransformerLayer):
         """
         _inputs = np.eye(self.units, dtype=np.complex64) if self.incoherent else inputs
         mesh_phases, mesh_layers = self.phases_and_layers
-        outputs = _inputs * mesh_phases.input_phase_shift_layer if self.include_diagonal_phases else _inputs
+        outputs = _inputs * mesh_phases.input_phase_shift_layer
         for layer in range(self.num_layers):
             outputs = mesh_layers[layer].transform(outputs)
         if self.incoherent:
@@ -539,8 +546,7 @@ class MeshLayer(TransformerLayer):
         inputs = outputs
         for layer in reversed(range(self.num_layers)):
             inputs = mesh_layers[layer].inverse_transform(inputs)
-        if self.include_diagonal_phases:
-            inputs = inputs * tf.math.conj(mesh_phases.input_phase_shift_layer)
+        inputs = inputs * tf.math.conj(mesh_phases.input_phase_shift_layer)
         return inputs
 
     @property
@@ -554,12 +560,11 @@ class MeshLayer(TransformerLayer):
             theta=self.theta,
             phi=self.phi,
             mask=self.mesh.model.mask,
-            fixed_theta=self.fixed_theta,
-            fixed_phi=self.fixed_phi,
             gamma=self.gamma,
             hadamard=self.mesh.model.hadamard,
             units=self.units,
-            basis=self.mesh.model.basis
+            basis=self.mesh.model.basis,
+            phase_loss_fn=self.phase_loss_fn
         )
         mesh_layers = self.mesh.mesh_layers(mesh_phases)
         return mesh_phases, mesh_layers
@@ -579,8 +584,15 @@ class MeshLayer(TransformerLayer):
         )
 
 
-def roll_tensor(tensor: tf.Tensor, up=False):
+def _roll_tensor(tensor: tf.Tensor, up=False):
     # a complex number-friendly roll that works on gpu
     if up:
         return tf.concat([tensor[1:], tensor[tf.newaxis, 0]], axis=0)
     return tf.concat([tensor[tf.newaxis, -1], tensor[:-1]], axis=0)
+
+
+def _to_complex(tensor: tf.Tensor):
+    if isinstance(tensor, tf.Tensor) and tensor.dtype == tf.float32:
+        return tf.complex(tensor, tf.zeros_like(tensor))
+    else:
+        return tensor
