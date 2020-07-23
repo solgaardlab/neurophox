@@ -175,8 +175,8 @@ def test_correspondence(test_case: tf.test.TestCase, np_layer: MeshNumpyLayer):
     tf_layer = MeshLayer(np_layer.mesh.model)
     t_layer = MeshTorchLayer(np_layer.mesh.model)
     test_case.assertAllClose(tf_layer.matrix, np_layer.matrix)
-    test_case.assertAllClose(t_layer.matrix(), np_layer.matrix)
     test_case.assertAllClose(tf_layer.matrix.conj().T, np_layer.inverse_matrix)
+    test_case.assertAllClose(t_layer.matrix(), np_layer.matrix)
 
 
 if __name__ == '__main__':

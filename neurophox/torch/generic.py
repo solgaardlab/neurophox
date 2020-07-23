@@ -245,6 +245,8 @@ class MeshPhasesTorch:
         hadamard: Whether to use Hadamard convention
         fixed_theta: The fixed theta values to set at (1 - mask)
         fixed_phi: The fixed phi values to set at (1 - mask)
+        theta_mask: The theta mask for fixed_theta, overrides mask
+        phi_mask: The phi mask for fixed_phi, overrides mask
         phase_loss_fn: Incorporate phase shift-dependent loss into the model.
                         The function is of the form phase_loss_fn(phases),
                         which returns the loss
@@ -256,11 +258,18 @@ class MeshPhasesTorch:
                  phase_loss_fn: Optional[Callable[[torch.Tensor], torch.Tensor]] = None):
         self.mask = mask if mask is not None else np.ones_like(theta)
         torch_mask = torch.as_tensor(mask, dtype=theta.dtype, device=theta.device)
-        torch_inv_mask = torch.as_tensor(1 - mask, dtype=theta.dtype, device=theta.device)
-        fixed_theta = (1 - hadamard) * np.pi if not fixed_theta else torch.as_tensor(fixed_theta)
-        fixed_phi = (1 - hadamard) * np.pi if not fixed_phi else torch.as_tensor(fixed_phi)
-        self.theta = MeshParamTorch(theta * torch_mask + torch_inv_mask * fixed_theta, units=units)
-        self.phi = MeshParamTorch(phi * torch_mask + torch_inv_mask * fixed_phi, units=units)
+        if fixed_theta is None:
+            fixed_theta, theta_mask = (1 - hadamard) * np.pi, torch_mask
+        else:
+            fixed_theta, theta_mask = torch.as_tensor(fixed_theta[0], dtype=theta.dtype, device=theta.device), \
+                                      torch.as_tensor(fixed_theta[1], dtype=theta.dtype, device=theta.device)
+        if fixed_phi is None:
+            fixed_phi, phi_mask = (1 - hadamard) * np.pi, torch_mask
+        else:
+            fixed_phi, phi_mask = torch.as_tensor(fixed_phi[0], dtype=phi.dtype, device=phi.device), \
+                                  torch.as_tensor(fixed_phi[1], dtype=phi.dtype, device=phi.device)
+        self.theta = MeshParamTorch(theta * theta_mask + (1 - theta_mask) * fixed_theta, units=units)
+        self.phi = MeshParamTorch(phi * phi_mask + (1 - phi_mask) * fixed_phi, units=units)
         self.gamma = gamma
         self.basis = basis
         self.phase_fn = lambda phase: rc_mul(torch.as_tensor(1 - phase_loss_fn(phase)),

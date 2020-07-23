@@ -15,17 +15,17 @@ class RMTorch(MeshTorchLayer):
         hadamard: Hadamard convention for the beamsplitters
         basis: Phase basis to use
         bs_error: Beamsplitter split ratio error
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
+        theta_init: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
 
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_rect",
-                 phi_init_name: Optional[str] = "random_phi", gamma_init_name: Optional[str] = "random_gamma"):
+                 bs_error: float = 0.0, theta_init: Optional[str] = "haar_rect",
+                 phi_init: Optional[str] = "random_phi", gamma_init: Optional[str] = "random_gamma"):
         super(RMTorch, self).__init__(
             RectangularMeshModel(units, num_layers, hadamard, bs_error, basis,
-                                 theta_init_name, phi_init_name, gamma_init_name))
+                                 theta_init, phi_init, gamma_init))
 
 
 class TMTorch(MeshTorchLayer):
@@ -36,17 +36,17 @@ class TMTorch(MeshTorchLayer):
         hadamard: Hadamard convention for the beamsplitters
         basis: Phase basis to use
         bs_error: Beamsplitter split ratio error
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
+        theta_init: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
 
     def __init__(self, units: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init_name: Optional[str] = "haar_tri",
-                 phi_init_name: Optional[str] = "random_phi", gamma_init_name: Optional[str] = "random_gamma"):
+                 bs_error: float = 0.0, theta_init: Optional[str] = "haar_tri",
+                 phi_init: Optional[str] = "random_phi", gamma_init: Optional[str] = "random_gamma"):
         super(TMTorch, self).__init__(
             TriangularMeshModel(units, hadamard, bs_error, basis,
-                                theta_init_name, phi_init_name, gamma_init_name)
+                                theta_init, phi_init, gamma_init)
         )
 
 
@@ -59,22 +59,22 @@ class PRMTorch(MeshTorchLayer):
         num_tunable_layers_list: Number of tunable layers in each block in order from left to right
         sampling_frequencies: Frequencies of sampling frequencies between the tunable layers
         bs_error: Photonic error in the beamsplitter
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
-        gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
+        theta_init: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        gamma_init: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
     """
 
     def __init__(self, units: int, tunable_layers_per_block: int = None,
                  num_tunable_layers_list: Optional[List[int]] = None, sampling_frequencies: Optional[List[int]] = None,
                  bs_error: float = 0.0, hadamard: bool = False,
-                 theta_init_name: Optional[str] = "haar_prm", phi_init_name: Optional[str] = "random_phi",
-                 gamma_init_name: Optional[str] = "random_gamma"):
-        if theta_init_name == 'haar_prm' and tunable_layers_per_block is not None:
+                 theta_init: Optional[str] = "haar_prm", phi_init: Optional[str] = "random_phi",
+                 gamma_init: Optional[str] = "random_gamma"):
+        if theta_init == 'haar_prm' and tunable_layers_per_block is not None:
             raise NotImplementedError('haar_prm initializer is incompatible with setting tunable_layers_per_block.')
         super(PRMTorch, self).__init__(
             PermutingRectangularMeshModel(units, tunable_layers_per_block, num_tunable_layers_list,
                                           sampling_frequencies, bs_error, hadamard,
-                                          theta_init_name, phi_init_name, gamma_init_name)
+                                          theta_init, phi_init, gamma_init)
         )
 
 
@@ -85,15 +85,15 @@ class BMTorch(MeshTorchLayer):
         hadamard: Hadamard convention for the beamsplitters
         basis: Phase basis to use
         bs_error: Beamsplitter split ratio error
-        theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
-        phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        theta_init: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+        phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
     """
 
     def __init__(self, num_layers: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, theta_init_name: Optional[str] = "random_theta",
-                 phi_init_name: Optional[str] = "random_phi"):
+                 bs_error: float = 0.0, theta_init: Optional[str] = "random_theta",
+                 phi_init: Optional[str] = "random_phi"):
         super(BMTorch, self).__init__(
-            ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init_name, phi_init_name)
+            ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init, phi_init)
         )
 
 

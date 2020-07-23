@@ -97,7 +97,8 @@ class CompoundTransformerLayer(TransformerLayer):
         super(CompoundTransformerLayer, self).__init__(units=units)
 
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:
-        """Inputs are transformed by :math:`L` transformer layers :math:`T^{(\ell)} \in \mathbb{C}^{N \\times N}` as follows:
+        """Inputs are transformed by :math:`L` transformer layers
+        :math:`T^{(\ell)} \in \mathbb{C}^{N \\times N}` as follows:
 
         .. math::
             V_{\mathrm{out}} = V_{\mathrm{in}} \prod_{\ell=1}^L T_\ell,
@@ -288,7 +289,7 @@ class MeshParamTensorflow:
         :math:`\\boldsymbol{\\theta} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_M]^T`,
         where :math:`\\boldsymbol{\\theta}_n` represent row vectors and :math:`M = \\lfloor\\frac{N}{2}\\rfloor`,
         the common-mode arrangement has the stripe array form
-        :math:`\\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_2, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{\\theta}_N]^T`.
+        :math:`\\widetilde{\\boldsymbol{\\theta}} = [\\boldsymbol{\\theta}_1, \\boldsymbol{\\theta}_1,\\boldsymbol{\\theta}_2, \\boldsymbol{\\theta}_2, \ldots \\boldsymbol{\\theta}_N, \\boldsymbol{\\theta}_N]^T`.
         where :math:`\widetilde{\\boldsymbol{\\theta}} \in \mathbb{R}^{N \\times L}` defines the :math:`\\boldsymbol{\\theta}` of the final mesh.
 
 
@@ -338,8 +339,10 @@ class MeshPhasesTensorflow:
         mask: Mask over values of :code:`theta` and :code:`phi` that are not in bar state
         basis: Phase basis to use
         hadamard: Whether to use Hadamard convention
-        fixed_theta: The fixed theta values to set at (1 - mask)
-        fixed_phi: The fixed phi values to set at (1 - mask)
+        fixed_theta: Tuple of the form `(theta, tmask)` of :math:`\\boldsymbol{\\theta}` values
+                    to set at `(1 - tmask)` (overrides mask)
+        fixed_phi: The fixed `(phi, pmask)` of :math:`\\boldsymbol{\\phi}` values
+                    to set at `(1 - pmask)` (overrides mask)
         phase_loss_fn: Incorporate phase shift-dependent loss into the model.
                         The function is of the form phase_loss_fn(phases),
                         which returns the loss
@@ -347,13 +350,16 @@ class MeshPhasesTensorflow:
     """
     def __init__(self, theta: tf.Variable, phi: tf.Variable, mask: np.ndarray, gamma: tf.Variable, units: int,
                  basis: str = SINGLEMODE, hadamard: bool = False,
-                 fixed_theta: Optional[np.ndarray] = None, fixed_phi: Optional[np.ndarray] = None,
+                 fixed_theta: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+                 fixed_phi: Optional[Tuple[np.ndarray, np.ndarray]] = None,
                  phase_loss_fn: Optional[Callable[[tf.Tensor], tf.Tensor]] = None):
         self.mask = mask if mask is not None else np.ones_like(theta)
-        fixed_theta = (1 - hadamard) * np.pi if not fixed_theta else fixed_theta
-        fixed_phi = (1 - hadamard) * np.pi if not fixed_phi else fixed_phi
-        self.theta = MeshParamTensorflow(theta * mask + (1 - mask) * fixed_theta, units=units)
-        self.phi = MeshParamTensorflow(phi * mask + (1 - mask) * fixed_phi, units=units)
+
+        fixed_theta, tmask = (1 - hadamard) * np.pi, mask if fixed_theta is None else fixed_theta
+        fixed_phi, pmask = (1 - hadamard) * np.pi, mask if fixed_phi is None else fixed_phi
+
+        self.theta = MeshParamTensorflow(theta * tmask + (1 - tmask) * fixed_theta, units=units)
+        self.phi = MeshParamTensorflow(phi * pmask + (1 - pmask) * fixed_phi, units=units)
         self.gamma = gamma
         self.basis = basis
         self.phase_loss_fn = (lambda x: 0) if phase_loss_fn is None else phase_loss_fn
@@ -423,7 +429,7 @@ class Mesh:
         self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
         ss, cs, sc, cc = self.model.mzi_error_tensors
         self.ss, self.cs, self.sc, self.cc = tf.constant(ss, dtype=TF_COMPLEX), tf.constant(cs, dtype=TF_COMPLEX), \
-                                               tf.constant(sc, dtype=TF_COMPLEX), tf.constant(cc, dtype=TF_COMPLEX)
+                                             tf.constant(sc, dtype=TF_COMPLEX), tf.constant(cc, dtype=TF_COMPLEX)
         self.perm_layers = [PermutationLayer(self.model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
     def mesh_layers(self, phases: MeshPhasesTensorflow) -> List[MeshVerticalLayer]:
@@ -483,6 +489,7 @@ class MeshLayer(TransformerLayer):
         super(MeshLayer, self).__init__(self.units, activation=activation, **kwargs)
         theta_init, phi_init, gamma_init = self.mesh.model.init()
         self.theta, self.phi, self.gamma = theta_init.to_tf("theta"), phi_init.to_tf("phi"), gamma_init.to_tf("gamma")
+        self.fixed_theta, self.fixed_phi = self.mesh.model.fixed_theta, self.mesh.model.fixed_phi
 
     @tf.function
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:
@@ -547,6 +554,8 @@ class MeshLayer(TransformerLayer):
             theta=self.theta,
             phi=self.phi,
             mask=self.mesh.model.mask,
+            fixed_theta=self.fixed_theta,
+            fixed_phi=self.fixed_phi,
             gamma=self.gamma,
             hadamard=self.mesh.model.hadamard,
             units=self.units,

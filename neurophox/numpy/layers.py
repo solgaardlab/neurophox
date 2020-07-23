@@ -9,8 +9,8 @@ from ..helpers import grid_viz_permutation
 
 class RMNumpy(MeshNumpyLayer):
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, phases: Optional[MeshPhases] = None, theta_init_name="haar_rect",
-                 phi_init_name="random_phi", gamma_init_name="random_gamma"):
+                 bs_error: float = 0.0, phases: Optional[MeshPhases] = None, theta_init="haar_rect",
+                 phi_init="random_phi", gamma_init="random_gamma"):
         """Rectangular mesh network layer for unitary operators implemented in numpy
 
         Args:
@@ -20,13 +20,13 @@ class RMNumpy(MeshNumpyLayer):
             basis: Phase basis to use
             bs_error: Beamsplitter split ratio error
             phases: The MeshPhases control parameters for the mesh
-            theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
-            phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
-            gamma_init_name: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
+            theta_init: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+            phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+            gamma_init: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
         """
         super(RMNumpy, self).__init__(
             RectangularMeshModel(units, num_layers, hadamard, bs_error, basis,
-                                 theta_init_name, phi_init_name, gamma_init_name), phases
+                                 theta_init, phi_init, gamma_init), phases
         )
 
     def propagate(self, inputs: np.ndarray, explicit: bool = False,
@@ -47,7 +47,7 @@ class RMNumpy(MeshNumpyLayer):
 class TMNumpy(MeshNumpyLayer):
     def __init__(self, units: int, hadamard: bool = False, basis: str = DEFAULT_BASIS,
                  bs_error: float = 0.0, phases: Optional[MeshPhases] = None,
-                 theta_init_name="haar_tri", phi_init_name="random_phi", gamma_init_name="random_gamma"):
+                 theta_init="haar_tri", phi_init="random_phi", gamma_init="random_gamma"):
         """Triangular mesh network layer for unitary operators implemented in numpy
 
         Args:
@@ -59,7 +59,7 @@ class TMNumpy(MeshNumpyLayer):
         """
         super(TMNumpy, self).__init__(
             TriangularMeshModel(units, hadamard, bs_error, basis,
-                                theta_init_name, phi_init_name, gamma_init_name), phases
+                                theta_init, phi_init, gamma_init), phases
         )
 
     def propagate(self, inputs: np.ndarray, explicit: bool = False,
@@ -75,8 +75,8 @@ class TMNumpy(MeshNumpyLayer):
 
 class BMNumpy(MeshNumpyLayer):
     def __init__(self, num_layers: int, phases: Optional[MeshPhases] = None, basis: str = DEFAULT_BASIS,
-                 bs_error: float = 0.0, hadamard: bool = False, theta_init_name: Optional[str] = 'random_theta',
-                 phi_init_name: Optional[str] = 'random_phi'):
+                 bs_error: float = 0.0, hadamard: bool = False, theta_init: Optional[str] = 'random_theta',
+                 phi_init: Optional[str] = 'random_phi'):
         """Butterfly mesh unitary layer (currently, only :math:`2^L` units allowed)
 
         Args:
@@ -84,19 +84,19 @@ class BMNumpy(MeshNumpyLayer):
             phases: The MeshPhases control parameters for the mesh
             bs_error: Photonic error in the beamsplitter
             hadamard: Hadamard convention for the beamsplitters
-            theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
-            phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+            theta_init: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+            phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         """
         super(BMNumpy, self).__init__(
-            ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init_name, phi_init_name), phases
+            ButterflyMeshModel(num_layers, hadamard, bs_error, basis, theta_init, phi_init), phases
         )
 
 
 class PRMNumpy(MeshNumpyLayer):
     def __init__(self, units: int, phases: Optional[MeshPhases] = None, tunable_layers_per_block: int = None,
                  num_tunable_layers_list: Optional[List[int]] = None, sampling_frequencies: Optional[List[int]] = None,
-                 bs_error: float = 0.0, hadamard: bool = False, theta_init_name: Optional[str] = 'haar_prm',
-                 phi_init_name: Optional[str] = 'random_phi'):
+                 bs_error: float = 0.0, hadamard: bool = False, theta_init: Optional[str] = 'haar_prm',
+                 phi_init: Optional[str] = 'random_phi'):
         """Permuting rectangular mesh unitary layer
 
         Args:
@@ -107,13 +107,13 @@ class PRMNumpy(MeshNumpyLayer):
             sampling_frequencies: Frequencies of sampling frequencies between the tunable layers
             bs_error: Photonic error in the beamsplitter
             hadamard: Hadamard convention for the beamsplitters
-            theta_init_name: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
-            phi_init_name: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+            theta_init: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
+            phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         """
-        if theta_init_name == 'haar_prm' and tunable_layers_per_block is not None:
+        if theta_init == 'haar_prm' and tunable_layers_per_block is not None:
             raise NotImplementedError('haar_prm initializer is incompatible with setting tunable_layers_per_block.')
         super(PRMNumpy, self).__init__(
             PermutingRectangularMeshModel(units, tunable_layers_per_block, num_tunable_layers_list,
                                           sampling_frequencies, bs_error, hadamard,
-                                          theta_init_name, phi_init_name), phases
+                                          theta_init, phi_init), phases
         )

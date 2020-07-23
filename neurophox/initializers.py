@@ -59,6 +59,23 @@ class MeshPhaseInitializer:
         return phase
 
 
+class PhaseInitializer(MeshPhaseInitializer):
+    """
+    User-specified initialization of rectangular and triangular mesh architectures.
+
+    Args:
+        phase: Phase to initialize
+        units: Input dimension, :math:`N`
+    """
+
+    def __init__(self, phase: np.ndarray, units: int):
+        self.phase, self.units = phase, units
+        super(PhaseInitializer, self).__init__(units, self.phase.shape[0])
+
+    def to_np(self) -> np.ndarray:
+        return self.phase.astype(NP_FLOAT)
+
+
 class HaarRandomPhaseInitializer(MeshPhaseInitializer):
     """
     Haar-random initialization of rectangular and triangular mesh architectures.
