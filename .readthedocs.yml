@@ -3,6 +3,13 @@ version: 2
 conda:
   environment: .conda.yml
 
+python:
+  version: 3.7
+  install:
+    - requirements: doc/requirements.txt
+    - method: setuptools
+      path: .
+
 sphinx:
   builder: html
   configuration: doc/source/conf.py
