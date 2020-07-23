@@ -446,12 +446,12 @@ class Mesh:
         # smooth trick to efficiently perform the layerwise coupling computation
 
         if self.model.hadamard:
-            s11 = (self.cc * internal_psl + self.ss * _roll_tensor(internal_psl, up=True))
+            s11 = self.cc * internal_psl + self.ss * _roll_tensor(internal_psl, up=True)
             s22 = _roll_tensor(self.ss * internal_psl + self.cc * _roll_tensor(internal_psl, up=True))
             s12 = _roll_tensor(self.cs * internal_psl - self.sc * _roll_tensor(internal_psl, up=True))
-            s21 = (self.sc * internal_psl - self.cs * _roll_tensor(internal_psl, up=True))
+            s21 = self.sc * internal_psl - self.cs * _roll_tensor(internal_psl, up=True)
         else:
-            s11 = (self.cc * internal_psl - self.ss * _roll_tensor(internal_psl, up=True))
+            s11 = self.cc * internal_psl - self.ss * _roll_tensor(internal_psl, up=True)
             s22 = _roll_tensor(-self.ss * internal_psl + self.cc * _roll_tensor(internal_psl, up=True))
             s12 = 1j * _roll_tensor(self.cs * internal_psl + self.sc * _roll_tensor(internal_psl, up=True))
             s21 = 1j * (self.sc * internal_psl + self.cs * _roll_tensor(internal_psl, up=True))

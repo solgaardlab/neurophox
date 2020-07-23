@@ -31,11 +31,11 @@ class TransformerLayer(Module):
 
     def matrix(self) -> np.ndarray:
         torch_matrix = self.transform(np.eye(self.units, dtype=np.complex64)).cpu().detach().numpy()
-        return torch_matrix[0] + 1j * torch_matrix[1]
+        return torch_matrix
 
-    def inverse_matrix(self):
+    def inverse_matrix(self) -> np.ndarray:
         torch_matrix = self.inverse_transform(np.eye(self.units, dtype=np.complex64)).cpu().detach().numpy()
-        return torch_matrix[0] + 1j * torch_matrix[1]
+        return torch_matrix
 
     def plot(self, plt):
         plot_complex_matrix(plt, self.matrix())
@@ -113,10 +113,10 @@ class MeshVerticalLayer(TransformerLayer):
             :math:`V_{\mathrm{out}} \in \mathbb{C}^{M \\times N}`.
         """
         if isinstance(inputs, np.ndarray):
-            inputs = to_complex_t(inputs, self.device)
+            inputs = torch.tensor(inputs, dtype=torch.cfloat, device=self.diag.device)
         outputs = inputs if self.left_perm is None else self.left_perm(inputs)
-        diag_out = cc_mul(outputs, self.diag)
-        off_diag_out = cc_mul(outputs, self.off_diag)
+        diag_out = outputs * self.diag
+        off_diag_out = outputs * self.off_diag
         outputs = diag_out + off_diag_out[..., self.pairwise_perm_idx]
         outputs = outputs if self.right_perm is None else self.right_perm(outputs)
         return outputs
@@ -137,13 +137,11 @@ class MeshVerticalLayer(TransformerLayer):
             :math:`V_{\mathrm{in}} \in \mathbb{C}^{M \\times N}`.
         """
         if isinstance(outputs, np.ndarray):
-            outputs = to_complex_t(outputs, self.device)
+            outputs = torch.tensor(outputs, dtype=torch.cfloat, device=self.diag.device)
         inputs = outputs if self.right_perm is None else self.right_perm.inverse_transform(outputs)
-        diag = conj_t(self.diag)
-        off_diag = conj_t(self.off_diag[..., self.pairwise_perm_idx])
-        diag_out = cc_mul(inputs, diag)
-        off_diag_out = cc_mul(inputs, off_diag)
-        inputs = diag_out + off_diag_out[..., self.pairwise_perm_idx]
+        diag = self.diag.conj()
+        off_diag = self.off_diag[..., self.pairwise_perm_idx].conj()
+        inputs = inputs * diag + (inputs * off_diag)[..., self.pairwise_perm_idx]
         inputs = inputs if self.left_perm is None else self.left_perm.inverse_transform(inputs)
         return inputs
 
@@ -270,8 +268,7 @@ class MeshPhasesTorch:
         self.phi = MeshParamTorch(self.phi_fn(phi) * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
         self.gamma = self.gamma_fn(gamma)
         self.basis = basis
-        self.phase_fn = lambda phase: rc_mul(torch.as_tensor(1 - phase_loss_fn(phase)),
-                                             phasor(phase)) if phase_loss_fn is not None else phasor(phase)
+        self.phase_fn = lambda phase: torch.as_tensor(1 - phase_loss_fn(phase)) * phasor(phase) if phase_loss_fn is not None else phasor(phase)
         self.input_phase_shift_layer = self.phase_fn(gamma)
         if self.theta.param.shape != self.phi.param.shape:
             raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
@@ -368,8 +365,8 @@ class MeshTorchLayer(TransformerLayer):
         )
         mesh_layers = self.mesh_layers(mesh_phases)
         if isinstance(inputs, np.ndarray):
-            inputs = to_complex_t(inputs, self.theta.device)
-        outputs = cc_mul(inputs, mesh_phases.input_phase_shift_layer)
+            inputs = torch.tensor(inputs, dtype=torch.cfloat, device=self.theta.device)
+        outputs = inputs * mesh_phases.input_phase_shift_layer
         for mesh_layer in mesh_layers:
             outputs = mesh_layer(outputs)
         return outputs
@@ -395,10 +392,10 @@ class MeshTorchLayer(TransformerLayer):
             units=self.units, basis=self.mesh_model.basis
         )
         mesh_layers = self.mesh_layers(mesh_phases)
-        inputs = to_complex_t(outputs, self.theta.device) if isinstance(outputs, np.ndarray) else outputs
+        inputs = torch.tensor(outputs, dtype=torch.cfloat, device=self.theta.device) if isinstance(outputs, np.ndarray) else outputs
         for layer in reversed(range(self.num_layers)):
             inputs = mesh_layers[layer].inverse_transform(inputs)
-        inputs = cc_mul(inputs, conj_t(mesh_phases.input_phase_shift_layer))
+        inputs = inputs * mesh_phases.input_phase_shift_layer.conj()
         return inputs
 
     def adjoint_transform(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -433,63 +430,33 @@ class MeshTorchLayer(TransformerLayer):
         # smooth trick to efficiently perform the layerwise coupling computation
 
         if self.mesh_model.hadamard:
-            s11 = rc_mul(self.cc, internal_psl) + rc_mul(self.ss, internal_psl.roll(-1, 1))
-            s22 = (rc_mul(self.ss, internal_psl) + rc_mul(self.cc, internal_psl.roll(-1, 1))).roll(1, 1)
-            s12 = (rc_mul(self.cs, internal_psl) - rc_mul(self.sc, internal_psl.roll(-1, 1))).roll(1, 1)
-            s21 = rc_mul(self.sc, internal_psl) - rc_mul(self.cs, internal_psl.roll(-1, 1))
+            s11 = self.cc * internal_psl + self.ss * internal_psl.roll(-1, 0)
+            s22 = (self.ss * internal_psl + self.cc * internal_psl.roll(-1, 0)).roll(1, 0)
+            s12 = (self.cs * internal_psl - self.sc * internal_psl.roll(-1, 0)).roll(1, 0)
+            s21 = self.sc * internal_psl - self.cs * internal_psl.roll(-1, 0)
         else:
-            s11 = rc_mul(self.cc, internal_psl) - rc_mul(self.ss, internal_psl.roll(-1, 1))
-            s22 = (-rc_mul(self.ss, internal_psl) + rc_mul(self.cc, internal_psl.roll(-1, 1))).roll(1, 1)
-            s12 = s_mul(1j, (rc_mul(self.cs, internal_psl) + rc_mul(self.sc, internal_psl.roll(-1, 1))).roll(1, 1))
-            s21 = s_mul(1j, (rc_mul(self.sc, internal_psl) + rc_mul(self.cs, internal_psl.roll(-1, 1))))
+            s11 = self.cc * internal_psl - self.ss * internal_psl.roll(-1, 0)
+            s22 = (-self.ss * internal_psl + self.cc * internal_psl.roll(-1, 0)).roll(1, 0)
+            s12 = 1j * (self.cs * internal_psl + self.sc * internal_psl.roll(-1, 0)).roll(1, 0)
+            s21 = 1j * (self.sc * internal_psl + self.cs * internal_psl.roll(-1, 0))
 
-        diag_layers = cc_mul(external_psl, s11 + s22) / 2
-        off_diag_layers = cc_mul(external_psl.roll(1, 1), s21 + s12) / 2
+        diag_layers = external_psl * (s11 + s22) / 2
+        off_diag_layers = external_psl.roll(1, 0) * (s21 + s12) / 2
 
         if self.units % 2:
-            diag_layers = torch.cat((diag_layers[:, :-1], to_complex_t(np.ones((1, diag_layers.size()[-1])),
-                                                                       diag_layers.device)), dim=1)
+            diag_layers = torch.cat((diag_layers[:-1], torch.ones_like(diag_layers[-1:])), dim=0)
 
-        diag_layers, off_diag_layers = diag_layers.transpose(1, 2), off_diag_layers.transpose(1, 2)
+        diag_layers, off_diag_layers = diag_layers.t(), off_diag_layers.t()
 
         mesh_layers = [MeshVerticalLayer(
-            self.pairwise_perm_idx, diag_layers[:, 0], off_diag_layers[:, 0], self.perm_layers[1], self.perm_layers[0])]
+            self.pairwise_perm_idx, diag_layers[0], off_diag_layers[0], self.perm_layers[1], self.perm_layers[0])]
         for layer in range(1, self.num_layers):
-            mesh_layers.append(MeshVerticalLayer(self.pairwise_perm_idx, diag_layers[:, layer],
-                                                 off_diag_layers[:, layer], self.perm_layers[layer + 1]))
+            mesh_layers.append(MeshVerticalLayer(self.pairwise_perm_idx, diag_layers[layer],
+                                                 off_diag_layers[layer], self.perm_layers[layer + 1]))
 
         return mesh_layers
 
 
-# temporary helpers until pytorch supports complex numbers...which should be soon!
-# rc_mul is "real * complex" op
-# cc_mul is "complex * complex" op
-# s_mul is "complex scalar * complex" op
-
-
-def rc_mul(real: torch.Tensor, comp: torch.Tensor):
-    return real.unsqueeze(dim=0) * comp
-
-
-def cc_mul(comp1: torch.Tensor, comp2: torch.Tensor) -> torch.Tensor:
-    real = comp1[0] * comp2[0] - comp1[1] * comp2[1]
-    comp = comp1[0] * comp2[1] + comp1[1] * comp2[0]
-    return torch.stack((real, comp), dim=0)
-
-
-def s_mul(s: np.complex, comp: torch.Tensor):
-    return s.real * comp + torch.stack((-s.imag * comp[1], s.imag * comp[0]))
-
-
-def conj_t(comp: torch.Tensor):
-    return torch.stack((comp[0], -comp[1]), dim=0)
-
-
-def to_complex_t(nparray: np.ndarray, device: torch.device):
-    return torch.stack((torch.as_tensor(nparray.real, device=device, dtype=torch.float32),
-                        torch.as_tensor(nparray.imag, device=device, dtype=torch.float32)), dim=0)
-
-
 def phasor(phase: torch.Tensor):
-    return torch.stack((phase.cos(), phase.sin()), dim=0)
+    return torch.cos(phase) + 1j * torch.sin(phase)
 
