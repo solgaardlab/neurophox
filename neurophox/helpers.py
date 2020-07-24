@@ -324,7 +324,8 @@ def fix_phase_tf(fixed, mask):
     return lambda tensor: mask * tensor + (1 - mask) * fixed
 
 
-def fix_phase_torch(fixed: np.ndarray, mask: np.ndarray, dtype: torch.dtype, device: torch.device):
+def fix_phase_torch(fixed: np.ndarray, mask: np.ndarray,
+                    device: torch.device = torch.device('cpu'), dtype: torch.dtype = torch.cfloat):
     mask = torch.as_tensor(mask, dtype=dtype, device=device)
     fixed = torch.as_tensor(fixed, dtype=dtype, device=device)
     return lambda tensor: tensor * mask + (1 - mask) * fixed
@@ -333,7 +334,7 @@ def fix_phase_torch(fixed: np.ndarray, mask: np.ndarray, dtype: torch.dtype, dev
 def tri_phase_tf(phase_range: float):
     def pcf(phase):
         phase = tf.math.mod(phase, 2 * phase_range)
-        phase = tf.where(tf.greater(phase, np.pi),
+        phase = tf.where(tf.greater(phase, phase_range),
                          2 * phase_range * tf.ones_like(phase) - phase, phase)
         return phase
     return pcf

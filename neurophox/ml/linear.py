@@ -9,6 +9,44 @@ from ..helpers import random_gaussian_batch
 from ..tensorflow import MeshLayer, SVD
 
 
+def complex_mse(y_true: tf.Tensor, y_pred: tf.Tensor):
+    """
+
+    Args:
+        y_true: The true labels, :math:`V \in \mathbb{C}^{B \\times N}`
+        y_pred: The true labels, :math:`\\widehat{V} \in \mathbb{C}^{B \\times N}`
+
+    Returns:
+        The complex mean squared error :math:`\\boldsymbol{e} \in \mathbb{R}^B`,
+        where given example :math:`\\widehat{V}_i \in \mathbb{C}^N`,
+        we have :math:`e_i = \\frac{\|V_i - \\widehat{V}_i\|^2}{N}`.
+
+    """
+    real_loss = tf.losses.mse(tf.math.real(y_true), tf.math.real(y_pred))
+    imag_loss = tf.losses.mse(tf.math.imag(y_true), tf.math.imag(y_pred))
+    return (real_loss + imag_loss) / 2
+
+
+def normalized_fidelity(u: tf.Tensor, u_hat: tf.Tensor):
+    """
+
+    Args:
+        u: The true (target) unitary, :math:`U \in \mathrm{U}(N)`
+        u_hat: The estimated unitary (not necessarily unitary), :math:`\\widehat{U}`
+
+    Returns:
+        The normalized fidelity independent of the norm of :math:`\\widehat{U}`.
+
+    """
+
+    def trf(x: tf.Tensor, y=None):
+        y = x if y is None else y
+        trace = tf.linalg.trace(tf.transpose(tf.math.conj(x)) @ y)
+        return tf.math.real(trace) ** 2 + tf.math.imag(trace) ** 2
+
+    return trf(u_hat, u) / trf(u_hat)
+
+
 class LinearMultiModelRunner:
     """
     Complex mean square error linear optimization experiment that can run and track multiple model optimizations in parallel.
@@ -49,12 +87,13 @@ class LinearMultiModelRunner:
                 f'{self.logdir}/{experiment_name}/{name}/'
             ) for name in layer_names}
 
-    def iterate(self, target_unitary: np.ndarray):
+    def iterate(self, target_unitary: np.ndarray, cost_fn: Callable = complex_mse):
         """
         Run gradient update toward a target unitary :math:`U`.
 
         Args:
             target_unitary: Target unitary, :math:`U`.
+            cost_fn: Cost function for linear model (default to complex mean square error)
 
         """
         if self.train_on_test:
@@ -64,12 +103,12 @@ class LinearMultiModelRunner:
             x_train, y_train = generate_keras_batch(self.layers[0].units, target_unitary, self.batch_size)
         for name, layer, optimizer in zip(self.layer_names, self.layers, self.optimizers):
             with tf.GradientTape() as tape:
-                loss = complex_mse(layer(x_train), y_train)
+                loss = cost_fn(layer(x_train), y_train)
             grads = tape.gradient(loss, layer.trainable_variables)
             optimizer.apply_gradients(grads_and_vars=zip(grads, layer.trainable_variables))
             self.losses[name].append(tf.reduce_sum(
-                complex_mse(layer(tf.eye(layer.units, dtype=TF_COMPLEX)),
-                            tf.convert_to_tensor(target_unitary.astype(NP_COMPLEX)))).numpy()
+                cost_fn(layer(tf.eye(layer.units, dtype=TF_COMPLEX)),
+                        tf.convert_to_tensor(target_unitary.astype(NP_COMPLEX)))).numpy()
             )
             if self.iters % self.iterations_per_tb_update and self.logdir:
                 self.update_tensorboard(name)
@@ -129,21 +168,3 @@ def generate_keras_batch(units, target_unitary, batch_size):
     x_train = random_gaussian_batch(batch_size=batch_size, units=units)
     y_train = x_train @ target_unitary
     return tf.convert_to_tensor(x_train, dtype=TF_COMPLEX), tf.convert_to_tensor(y_train, dtype=TF_COMPLEX)
-
-
-def complex_mse(y_true, y_pred):
-    """
-
-    Args:
-        y_true: The true labels, :math:`V \in \mathbb{C}^{B \\times N}`
-        y_pred: The true labels, :math:`\\widehat{V} \in \mathbb{C}^{B \\times N}`
-
-    Returns:
-        The complex mean squared error :math:`\\boldsymbol{e} \in \mathbb{R}^B`,
-        where given example :math:`\\widehat{V}_i \in \mathbb{C}^N`,
-        we have :math:`e_i = \\frac{\|V_i - \\widehat{V}_i\|^2}{N}`.
-
-    """
-    real_loss = tf.losses.mse(tf.math.real(y_true), tf.math.real(y_pred))
-    imag_loss = tf.losses.mse(tf.math.imag(y_true), tf.math.imag(y_pred))
-    return (real_loss + imag_loss) / 2

@@ -64,8 +64,8 @@ If installing other dependencies manually, ensure you install [PyTorch](https://
 
 If using a GPU, we recommend using a `conda` environement to install GPU dependencies using CUDA 10.0 with the following commands:
 ```bash
-conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
-pip install tensorflow-gpu==2.0.0-alpha0
+conda install pytorch torchvision cudatoolkit=10.2 -c pytorch-nightly
+pip install tensorflow-gpu==2.2.0
 ```
 
 ### Features

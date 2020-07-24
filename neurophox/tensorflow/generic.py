@@ -491,8 +491,9 @@ class MeshLayer(TransformerLayer):
         self.incoherent = incoherent
         self.phase_loss_fn = phase_loss_fn
         super(MeshLayer, self).__init__(self.units, activation=activation, **kwargs)
-        theta_init, phi_init, gamma_init = self.mesh.model.init()
+        theta_init, phi_init, gamma_init = self.mesh.model.init
         self.theta, self.phi, self.gamma = theta_init.to_tf("theta"), phi_init.to_tf("phi"), gamma_init.to_tf("gamma")
+        self.theta_fn, self.phi_fn, self.gamma_fn = self.mesh.model.theta_fn, self.mesh.model.phi_fn, self.mesh.model.gamma_fn
 
     @tf.function
     def transform(self, inputs: tf.Tensor) -> tf.Tensor:
@@ -553,14 +554,10 @@ class MeshLayer(TransformerLayer):
             Phases and layers for this mesh layer
         """
         mesh_phases = MeshPhasesTensorflow(
-            theta=self.theta,
-            phi=self.phi,
-            mask=self.mesh.model.mask,
-            gamma=self.gamma,
-            hadamard=self.mesh.model.hadamard,
-            units=self.units,
-            basis=self.mesh.model.basis,
-            phase_loss_fn=self.phase_loss_fn
+            theta=self.theta, phi=self.phi, gamma=self.gamma,
+            theta_fn=self.theta_fn, phi_fn=self.phi_fn, gamma_fn=self.gamma_fn,
+            mask=self.mesh.model.mask, hadamard=self.mesh.model.hadamard,
+            units=self.units, basis=self.mesh.model.basis, phase_loss_fn=self.phase_loss_fn,
         )
         mesh_layers = self.mesh.mesh_layers(mesh_phases)
         return mesh_phases, mesh_layers

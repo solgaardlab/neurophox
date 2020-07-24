@@ -22,6 +22,7 @@ class RM(MeshLayer):
         theta_init: Initializer for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
         phi_init: Initializer for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         gamma_init: Initializer for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
+        phase_loss_fn: Phase loss function for the layer
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
@@ -50,6 +51,7 @@ class TM(MeshLayer):
         theta_init: Initializer for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
         phi_init: Initializer for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         gamma_init: Initializer for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
+        phase_loss_fn: Phase loss function for the layer
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
@@ -78,6 +80,7 @@ class PRM(MeshLayer):
         theta_init: Initializer for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
         phi_init: Initializer for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
         gamma_init: Initializer for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
+        phase_loss_fn: Phase loss function for the layer
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 
@@ -107,6 +110,7 @@ class BM(MeshLayer):
         bs_error: Beamsplitter split ratio error
         theta_init: Initializer for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
         phi_init: Initializer for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
+        phase_loss_fn: Phase loss function for the layer
         activation: Nonlinear activation function (:code:`None` if there's no nonlinearity)
     """
 

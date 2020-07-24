@@ -337,9 +337,10 @@ class MeshTorchLayer(TransformerLayer):
         self.register_buffer("cs", cs)
         self.register_buffer("sc", sc)
         self.register_buffer("cc", cc)
-        theta_init, phi_init, gamma_init = self.mesh_model.init()
+        theta_init, phi_init, gamma_init = self.mesh_model.init
         self.units, self.num_layers = self.mesh_model.units, self.mesh_model.num_layers
         self.theta, self.phi, self.gamma = theta_init.to_torch(), phi_init.to_torch(), gamma_init.to_torch()
+        self.theta_fn, self.phi_fn, self.gamma_fn = self.mesh_model.theta_fn, self.mesh_model.phi_fn, self.mesh_model.gamma_fn
         self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
         self.perm_layers = [PermutationLayer(self.mesh_model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
@@ -360,6 +361,7 @@ class MeshTorchLayer(TransformerLayer):
         """
         mesh_phases = MeshPhasesTorch(
             theta=self.theta, phi=self.phi, gamma=self.gamma,
+            theta_fn=self.theta_fn, phi_fn=self.phi_fn, gamma_fn=self.gamma_fn,
             mask=self.mesh_model.mask, hadamard=self.mesh_model.hadamard,
             units=self.units, basis=self.mesh_model.basis
         )

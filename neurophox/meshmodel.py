@@ -1,6 +1,5 @@
 from typing import Optional, Union, Tuple, List
 import numpy as np
-import tensorflow as tf
 
 try:
     import torch
@@ -14,7 +13,7 @@ from .config import BLOCH, TEST_SEED
 
 
 class MeshModel:
-    """Any feedforward mesh model of :math:`N` inputs/outputs and `L` layers.
+    """Any feedforward mesh model of :math:`N` inputs/outputs and :math:`L` layers.
 
     Args:
         perm_idx: A numpy array of :math:`N \\times L` permutation indices for all layers of the mesh
@@ -24,17 +23,11 @@ class MeshModel:
         testing: Use a seed for randomizing error (ignore for pure machine learning applications)
         use_different_errors: Use different errors for the left and right beamsplitter errors
         theta_init: Initializer for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
-                    a `str`, `ndarray`, or tuple of the form `(theta_init, theta_fn)`.
-                    Specifying `theta_mask` means the arg num_tunable will be ignored
-                    and you have to handle that case yourself.
+                    a :code:`str`, :code:`ndarray`, or tuple of the form :code:`(theta_init, theta_fn)`.
         phi_init: Initializer for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`):
-                  a `str`, `ndarray`, or tuple of the form `(phi_init, phi_fn)`.
-                  Specifying `phi_mask` means the arg num_tunable will be ignored and you have to handle that case
-                  yourself.
+                  a :code:`str`, :code:`ndarray`, or tuple of the form :code:`(phi_init, phi_fn)`.
         gamma_init: Initializer for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`):
-                    a `str`, `ndarray`, or tuple of the form `(gamma_init, gamma_fn)`.
-                    Specifying `gamma_mask` means the arg num_tunable will be ignored and you have to handle that case
-                    yourself.
+                    a :code:`str`, :code:`ndarray`, or tuple of the form :code:`(gamma_init, gamma_fn)`.
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
     """
 
@@ -63,10 +56,11 @@ class MeshModel:
         if self.units < 2:
             raise ValueError("units must be at least 2.")
 
+    @property
     def init(self) -> Tuple[MeshPhaseInitializer, MeshPhaseInitializer, MeshPhaseInitializer]:
         """
         Returns:
-            Numpy arrays or Tensorflow variables corresponding to :math:`\\boldsymbol{\\theta}, \\boldsymbol{\\phi}, \gamma_n`.
+            Initializers for :math:`\\boldsymbol{\\theta}, \\boldsymbol{\\phi}, \gamma_n`.
         """
         if not isinstance(self.theta_init, np.ndarray):
             theta_init = get_initializer(self.units, self.num_layers, self.theta_init, self.hadamard, self.testing)
@@ -137,16 +131,17 @@ class RectangularMeshModel(MeshModel):
         bs_error: Beamsplitter layer
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
         theta_init: Initializer for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`),
-                    see `MeshModel`.
-        phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`),
-                  see `MeshModel`.
-        gamma_init: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`),
-                    see `MeshModel`.
+                    see :code:`MeshModel`.
+        phi_init: Initializer for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`),
+                  see :code:`MeshModel`.
+        gamma_init: Initializer for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`),
+                    see :code:`MeshModel`.
     """
 
     def __init__(self, units: int, num_layers: int = None, hadamard: bool = False, bs_error: float = 0.0,
-                 basis: str = BLOCH, theta_init: str = "haar_rect", phi_init: str = "random_phi",
-                 gamma_init: str = "random_gamma"):
+                 basis: str = BLOCH, theta_init: Union[str, tuple, np.ndarray] = "haar_rect",
+                 phi_init: Union[str, tuple, np.ndarray] = "random_phi",
+                 gamma_init: Union[str, tuple, np.ndarray] = "random_gamma"):
         self.num_layers = num_layers if num_layers else units
         perm_idx = grid_permutation(units, self.num_layers).astype(np.int32)
         num_mzis = (np.ones((self.num_layers,)) * units // 2).astype(np.int32)
@@ -173,16 +168,17 @@ class TriangularMeshModel(MeshModel):
         bs_error: Beamsplitter layer
         basis: Phase basis to use for controlling each pairwise unitary (simulated interferometer) in the mesh
         theta_init: Initializer for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`),
-                    see `MeshModel`.
-        phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`),
-                  see `MeshModel`.
-        gamma_init: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`),
-                    see `MeshModel`.
+                    see :code:`MeshModel`.
+        phi_init: Initializer for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`),
+                  see :code:`MeshModel`.
+        gamma_init: Initializer for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`),
+                    see :code:`MeshModel`.
     """
 
     def __init__(self, units: int, hadamard: bool = False, bs_error: float = 0.0, basis: str = BLOCH,
-                 theta_init: str = "haar_tri", phi_init: str = "random_phi",
-                 gamma_init: str = "random_gamma"):
+                 theta_init: Union[str, tuple, np.ndarray] = "haar_tri",
+                 phi_init: Union[str, tuple, np.ndarray] = "random_phi",
+                 gamma_init: Union[str, tuple, np.ndarray] = "random_gamma"):
         perm_idx = grid_permutation(units, 2 * units - 3).astype(np.int32)
         num_mzis = ((np.hstack([np.arange(1, units), np.arange(units - 2, 0, -1)]) + 1) // 2).astype(np.int32)
         super(TriangularMeshModel, self).__init__(perm_idx,
@@ -207,17 +203,18 @@ class ButterflyMeshModel(MeshModel):
         hadamard: Hadamard convention
         bs_error: Beamsplitter layer
         theta_init: Initializer for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`),
-                    see `MeshModel`.
-        phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`),
-                  see `MeshModel`.
-        gamma_init: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`),
-                    see `MeshModel`.
+                    see :code:`MeshModel`.
+        phi_init: Initializer for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`),
+                  see :code:`MeshModel`.
+        gamma_init: Initializer for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`),
+                    see :code:`MeshModel`.
     """
 
     def __init__(self, num_layers: int, hadamard: bool = False,
                  bs_error: float = 0.0, basis: str = BLOCH,
-                 theta_init: str = "random_theta", phi_init: str = "random_phi",
-                 gamma_init: str = "random_gamma"):
+                 theta_init: Union[str, tuple, np.ndarray] = "random_theta",
+                 phi_init: Union[str, tuple, np.ndarray] = "random_phi",
+                 gamma_init: Union[str, tuple, np.ndarray] = "random_gamma"):
         super(ButterflyMeshModel, self).__init__(butterfly_permutation(num_layers),
                                                  hadamard=hadamard,
                                                  bs_error=bs_error,
@@ -238,17 +235,18 @@ class PermutingRectangularMeshModel(MeshModel):
         bs_error: Photonic error in the beamsplitter
         hadamard: Whether to use hadamard convention (otherwise use beamsplitter convention)
         theta_init: Initializer for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`),
-                    see `MeshModel`.
-        phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`),
-                  see `MeshModel`.
-        gamma_init: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`),
-                    see `MeshModel`.
+                    see :code:`MeshModel`.
+        phi_init: Initializer for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`),
+                  see :code:`MeshModel`.
+        gamma_init: Initializer for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`),
+                    see :code:`MeshModel`.
     """
 
     def __init__(self, units: int, tunable_layers_per_block: int = None,
                  num_tunable_layers_list: Optional[List[int]] = None, sampling_frequencies: Optional[List[int]] = None,
-                 bs_error: float = 0.0, hadamard: bool = False, theta_init: Optional[str] = 'haar_prm',
-                 phi_init: Optional[str] = 'random_phi', gamma_init: str = 'random_gamma'):
+                 bs_error: float = 0.0, hadamard: bool = False, theta_init: Union[str, tuple, np.ndarray] = 'haar_prm',
+                 phi_init: Union[str, tuple, np.ndarray] = 'random_phi',
+                 gamma_init: Union[str, tuple, np.ndarray] = 'random_gamma'):
 
         if tunable_layers_per_block is not None:
             self.block_sizes, self.sampling_frequencies = get_efficient_coarse_grain_block_sizes(

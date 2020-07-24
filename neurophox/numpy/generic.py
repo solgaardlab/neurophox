@@ -468,7 +468,7 @@ class MeshNumpyLayer(TransformerNumpyLayer):
 
     def _setup(self, testing: bool = False):
         self.mesh.model.testing = testing
-        theta_init, phi_init, gamma_init = self.mesh.model.init()
+        theta_init, phi_init, gamma_init = self.mesh.model.init
         self.theta, self.phi, self.gamma = theta_init.to_np(), phi_init.to_np(), gamma_init.to_np()
         self.units, self.num_layers = self.mesh.units, self.mesh.num_layers
         self.internal_phase_shift_layers = self.phases.internal_phase_shift_layers.T
