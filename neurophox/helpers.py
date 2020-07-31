@@ -2,65 +2,15 @@ from typing import Optional, Callable, Tuple
 
 import numpy as np
 import tensorflow as tf
-import torch
+try:
+    import torch
+except ImportError:
+    # if the user did not install pytorch, just do tensorflow stuff
+    pass
 
-from .components import BlochMZI
 from scipy.stats import multivariate_normal
 
 from .config import NP_FLOAT
-
-
-def clements_decomposition(unitary: np.ndarray, hadamard: bool=False,
-                           pbar_handle: Callable = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-
-    Args:
-        unitary: unitary matrix :math:`U` to be decomposed into pairwise operators.
-        hadamard: Whether to use Hadamard convention
-        pbar_handle: Useful for larger matrices
-
-    Returns:
-        Clements decomposition of unitary matrix :math:`U` in terms of
-        :math:`\\boldsymbol{\\theta}`, :math:`\\boldsymbol{\\phi}`, :math:`\\boldsymbol{\\gamma}`.
-
-    """
-    hadamard = hadamard
-    unitary_hat = np.copy(unitary)
-    units = unitary.shape[0]
-    # odd and even layer dimensions
-    theta_checkerboard = np.zeros_like(unitary, dtype=NP_FLOAT)
-    phi_checkerboard = np.zeros_like(unitary, dtype=NP_FLOAT)
-    iterator = pbar_handle(range(units - 1)) if pbar_handle else range(units - 1)
-    for i in iterator:
-        if i % 2 == 0:
-            for j in range(i + 1):
-                pairwise_index = i - j
-                target_row, target_col = units - j - 1, i - j
-                m, n = units - 1 - target_row, units - 1 - target_col
-                theta = np.arctan(np.abs(
-                    unitary_hat[target_row, target_col] / unitary_hat[target_row, target_col + 1])) * 2 + np.pi
-                phi = np.angle(
-                    unitary_hat[target_row, target_col] / unitary_hat[target_row, target_col + 1])
-                mzi = BlochMZI(theta, phi, hadamard=hadamard, dtype=np.complex128)
-                right_multiplier = mzi.givens_rotation(units=units, m=pairwise_index, i_factor=True)
-                unitary_hat = unitary_hat @ right_multiplier.conj().T
-                theta_checkerboard[m, n - 1] = theta
-                phi_checkerboard[m, n - 1] = phi
-        else:
-            for j in range(i + 1):
-                pairwise_index = units + j - i - 2
-                target_row, target_col = units + j - i - 1, j
-                m, n = target_row, target_col
-                theta = np.arctan(np.abs(unitary_hat[target_row, target_col] / unitary_hat[target_row - 1, target_col])) * 2 + np.pi
-                phi = np.angle(-unitary_hat[target_row, target_col] / unitary_hat[target_row - 1, target_col])
-                mzi = BlochMZI(theta, phi, hadamard=hadamard, dtype=np.complex128)
-                left_multiplier = mzi.givens_rotation(units=units, m=pairwise_index, i_factor=True)
-                unitary_hat = left_multiplier @ unitary_hat
-                theta_checkerboard[m, n] = theta
-                phi_checkerboard[m, n] = phi
-    theta_checkerboard = to_absolute_theta(theta_checkerboard).T
-    phi_checkerboard = np.mod(phi_checkerboard, 2 * np.pi)
-    return theta_checkerboard, phi_checkerboard, np.diag(unitary_hat)  # not quite the same as the model in MeshPhases
 
 
 def to_stripe_array(nparray: np.ndarray, units: int):
@@ -96,7 +46,7 @@ def to_absolute_theta(theta: np.ndarray) -> np.ndarray:
     return theta
 
 
-def get_haar_diagonal_sequence(diagonal_length, parity_odd: bool=False):
+def get_haar_diagonal_sequence(diagonal_length, parity_odd: bool = False):
     odd_nums = list(diagonal_length + 1 - np.flip(np.arange(1, diagonal_length + 1, 2), axis=0))
     even_nums = list(diagonal_length + 1 - np.arange(2, 2 * (diagonal_length - len(odd_nums)) + 1, 2))
     nums = np.asarray(odd_nums + even_nums)
@@ -105,11 +55,12 @@ def get_haar_diagonal_sequence(diagonal_length, parity_odd: bool=False):
     return nums
 
 
-def get_alpha_checkerboard(units: int, num_layers: int, include_off_mesh: bool=False, flipud=False):
+def get_alpha_checkerboard(units: int, num_layers: int, include_off_mesh: bool = False, flipud=False):
     if units < num_layers:
         raise ValueError("Require units >= num_layers!")
     alpha_checkerboard = np.zeros((units - 1, num_layers))
-    diagonal_length_to_sequence = [get_haar_diagonal_sequence(i, bool(num_layers % 2)) for i in range(1, num_layers + 1)]
+    diagonal_length_to_sequence = [get_haar_diagonal_sequence(i, bool(num_layers % 2)) for i in
+                                   range(1, num_layers + 1)]
     for i in range(units - 1):
         for j in range(num_layers):
             if (i + j) % 2 == 0:
@@ -141,7 +92,7 @@ def get_alpha_checkerboard_general(units: int, num_layers: int):
     return np.hstack(alpha_checkerboards)
 
 
-def get_efficient_coarse_grain_block_sizes(units: int, tunable_layers_per_block: int=2, use_cg_sequence: bool=True):
+def get_efficient_coarse_grain_block_sizes(units: int, tunable_layers_per_block: int = 2, use_cg_sequence: bool = True):
     num_blocks = int(np.rint(np.log2(units)))
     sampling_frequencies = [2 ** (block_num + 1) for block_num in range(num_blocks - 1)]
     if use_cg_sequence:
@@ -150,7 +101,7 @@ def get_efficient_coarse_grain_block_sizes(units: int, tunable_layers_per_block:
     return np.asarray(tunable_block_sizes, dtype=np.int32), np.asarray(sampling_frequencies, dtype=np.int32)
 
 
-def get_default_coarse_grain_block_sizes(units: int, use_cg_sequence: bool=True):
+def get_default_coarse_grain_block_sizes(units: int, use_cg_sequence: bool = True):
     num_blocks = int(np.rint(np.log2(units)))
     sampling_frequencies = [2 ** (block_num + 1) for block_num in range(num_blocks - 1)]
     if use_cg_sequence:
@@ -163,7 +114,7 @@ def get_default_coarse_grain_block_sizes(units: int, use_cg_sequence: bool=True)
 
 
 def prm_permutation(units: int, tunable_block_sizes: np.ndarray,
-                    sampling_frequencies: np.ndarray, butterfly: bool=False):
+                    sampling_frequencies: np.ndarray, butterfly: bool = False):
     grid_perms = [grid_permutation(units, tunable_block_size) for tunable_block_size in tunable_block_sizes]
     perms_to_concatenate = [grid_perms[0][0]]
     for idx, frequency in enumerate(sampling_frequencies):
@@ -222,7 +173,7 @@ def grid_permutation(units: int, num_layers: int):
                       permuted_indices.astype(np.int32)))
 
 
-def grid_viz_permutation(units: int, num_layers: int, flip: bool=False):
+def grid_viz_permutation(units: int, num_layers: int, flip: bool = False):
     ordered_idx = np.arange(units)
     split_num_layers = (num_layers - num_layers // 2, num_layers // 2)
     right_shift = np.roll(ordered_idx, 1, axis=0)
@@ -260,8 +211,8 @@ def plot_complex_matrix(plt, matrix: np.ndarray):
     plt.colorbar(shrink=0.7)
 
 
-def random_gaussian_batch(batch_size: int, units: int, covariance_matrix: Optional[np.ndarray]=None,
-                          seed: Optional[int]=None) -> np.ndarray:
+def random_gaussian_batch(batch_size: int, units: int, covariance_matrix: Optional[np.ndarray] = None,
+                          seed: Optional[int] = None) -> np.ndarray:
     if seed is not None:
         np.random.seed(seed)
     input_matrix = multivariate_normal.rvs(
@@ -317,6 +268,7 @@ def neurophox_matplotlib_setup(plt):
     # plt.rcParams['mathtext.fontset'] = 'dejavuserif'
     plt.rcParams.update({'text.latex.preamble': [r'\usepackage{siunitx}', r'\usepackage{amsmath}']})
 
+
 # Phase functions
 
 
@@ -337,6 +289,7 @@ def tri_phase_tf(phase_range: float):
         phase = tf.where(tf.greater(phase, phase_range),
                          2 * phase_range * tf.ones_like(phase) - phase, phase)
         return phase
+
     return pcf
 
 
@@ -345,4 +298,5 @@ def tri_phase_torch(phase_range: float):
         phase = torch.fmod(phase, 2 * phase_range)
         phase[phase > phase_range] = 2 * phase_range - phase[phase > phase_range]
         return phase
+
     return pcf

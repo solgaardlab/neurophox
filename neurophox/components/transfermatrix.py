@@ -60,14 +60,13 @@ class PairwiseUnitary:
     def inverse_matrix(self) -> np.ndarray:
         return self.matrix.conj().T
 
-    def givens_rotation(self, units: int, m: int, n: Optional[int] = None, i_factor=False) -> np.ndarray:
+    def givens_rotation(self, units: int, m: int, n: Optional[int] = None) -> np.ndarray:
         """Givens rotation matrix :math:`T_{m, n}` which rotates any vector about axes :math:`m, n`.
 
         Args:
             units: Input dimension to rotate
             m: Lower index to rotate
             n: Upper index to rotate, requires :math:`n > m` (defaults to `None`, which implies :math:`n = m + 1`)
-            i_factor: multiply by i (useful for Clements and Reck decompositions)
 
         Returns:
             The Givens rotation matrix
@@ -78,10 +77,10 @@ class PairwiseUnitary:
             raise ValueError('Require m < n')
         unitary = self.matrix
         givens_rotation = np.eye(units, dtype=self.dtype)
-        givens_rotation[m][m] = unitary[0, 0] * (-i_factor * 1j + (1 - i_factor))
-        givens_rotation[m][n] = unitary[0, 1] * (-i_factor * 1j + (1 - i_factor))
-        givens_rotation[n][m] = unitary[1, 0] * (i_factor * 1j + (1 - i_factor))
-        givens_rotation[n][n] = unitary[1, 1] * (i_factor * 1j + (1 - i_factor))
+        givens_rotation[m][m] = unitary[0, 0]
+        givens_rotation[m][n] = unitary[0, 1]
+        givens_rotation[n][m] = unitary[1, 0]
+        givens_rotation[n][n] = unitary[1, 1]
         return givens_rotation
 
 

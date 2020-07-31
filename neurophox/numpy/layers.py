@@ -19,7 +19,6 @@ class RMNumpy(MeshNumpyLayer):
             hadamard: Hadamard convention for the beamsplitters
             basis: Phase basis to use
             bs_error: Beamsplitter split ratio error
-            phases: The MeshPhases control parameters for the mesh
             theta_init: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
             phi_init: Initializer name for :code:`phi` (:math:`\\boldsymbol{\\phi}` or :math:`\\phi_{n\ell}`)
             gamma_init: Initializer name for :code:`gamma` (:math:`\\boldsymbol{\\gamma}` or :math:`\\gamma_{n}`)
@@ -55,7 +54,6 @@ class TMNumpy(MeshNumpyLayer):
             hadamard: Hadamard convention for the beamsplitters
             basis: Phase basis to use
             bs_error: Beamsplitter split ratio error
-            phases: The MeshPhases control parameters for the mesh
         """
         super(TMNumpy, self).__init__(
             TriangularMeshModel(units, hadamard, bs_error, basis,
@@ -81,7 +79,6 @@ class BMNumpy(MeshNumpyLayer):
 
         Args:
             num_layers: The number of layers (:math:`L`), with dimension of the unitary matrix set to (:math:`N = 2^L`)
-            phases: The MeshPhases control parameters for the mesh
             bs_error: Photonic error in the beamsplitter
             hadamard: Hadamard convention for the beamsplitters
             theta_init: Initializer name for :code:`theta` (:math:`\\boldsymbol{\\theta}` or :math:`\\theta_{n\ell}`)
@@ -101,7 +98,6 @@ class PRMNumpy(MeshNumpyLayer):
 
         Args:
             units: The dimension of the unitary matrix (:math:`N`) to be modeled by this transformer
-            phases: The MeshPhases control parameters for the mesh
             tunable_layers_per_block: The number of tunable layers per block (overrides `num_tunable_layers_list`, `sampling_frequencies`)
             num_tunable_layers_list: Number of tunable layers in each block in order from left to right
             sampling_frequencies: Frequencies of sampling frequencies between the tunable layers

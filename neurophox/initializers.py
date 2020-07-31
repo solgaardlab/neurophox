@@ -11,7 +11,7 @@ except ImportError:
 
 import numpy as np
 
-from .config import TF_FLOAT, NP_FLOAT, TEST_SEED
+from .config import TF_FLOAT, NP_FLOAT, TEST_SEED, T_FLOAT
 from .helpers import get_alpha_checkerboard_general, get_default_coarse_grain_block_sizes, \
     get_efficient_coarse_grain_block_sizes
 from scipy.special import betaincinv
@@ -55,7 +55,7 @@ class MeshPhaseInitializer:
             Initialized torch Parameter
         """
         phase_initializer = self.to_np()
-        phase = Parameter(torch.tensor(phase_initializer, dtype=torch.float32), requires_grad=is_trainable)
+        phase = Parameter(torch.tensor(phase_initializer, dtype=T_FLOAT), requires_grad=is_trainable)
         return phase
 
 

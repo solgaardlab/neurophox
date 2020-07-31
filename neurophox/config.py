@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import torch
 
 # Backends
 
@@ -14,6 +15,9 @@ NP_FLOAT = np.float64
 
 TF_COMPLEX = tf.complex64
 TF_FLOAT = tf.float32
+
+T_FLOAT = torch.double
+T_COMPLEX = torch.cdouble
 
 # Test seed
 

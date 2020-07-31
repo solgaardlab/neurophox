@@ -268,7 +268,8 @@ class MeshPhasesTorch:
         self.phi = MeshParamTorch(self.phi_fn(phi) * mask + (1 - mask) * (1 - hadamard) * np.pi, units=units)
         self.gamma = self.gamma_fn(gamma)
         self.basis = basis
-        self.phase_fn = lambda phase: torch.as_tensor(1 - phase_loss_fn(phase)) * phasor(phase) if phase_loss_fn is not None else phasor(phase)
+        self.phase_fn = lambda phase: torch.as_tensor(1 - phase_loss_fn(phase)) * phasor(phase) \
+            if phase_loss_fn is not None else phasor(phase)
         self.input_phase_shift_layer = self.phase_fn(gamma)
         if self.theta.param.shape != self.phi.param.shape:
             raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
@@ -276,7 +277,8 @@ class MeshPhasesTorch:
     @property
     def internal_phase_shifts(self):
         """The internal phase shift matrix of the mesh corresponds to an `L \\times N` array of phase shifts
-        (in between beamsplitters, thus internal) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
+        (in between beamsplitters, thus internal) where :math:`L` is number of layers
+        and :math:`N` is number of inputs/outputs.
 
         Returns:
             Internal phase shift matrix corresponding to :math:`\\boldsymbol{\\theta}`
@@ -291,7 +293,8 @@ class MeshPhasesTorch:
     @property
     def external_phase_shifts(self):
         """The external phase shift matrix of the mesh corresponds to an `L \\times N` array of phase shifts
-        (outside of beamsplitters, thus external) where :math:`L` is number of layers and :math:`N` is number of inputs/outputs
+        (outside of beamsplitters, thus external) where :math:`L` is number of layers and
+        :math:`N` is number of inputs/outputs.
 
         Returns:
             External phase shift matrix corresponding to :math:`\\boldsymbol{\\phi}`
@@ -340,7 +343,8 @@ class MeshTorchLayer(TransformerLayer):
         theta_init, phi_init, gamma_init = self.mesh_model.init
         self.units, self.num_layers = self.mesh_model.units, self.mesh_model.num_layers
         self.theta, self.phi, self.gamma = theta_init.to_torch(), phi_init.to_torch(), gamma_init.to_torch()
-        self.theta_fn, self.phi_fn, self.gamma_fn = self.mesh_model.theta_fn, self.mesh_model.phi_fn, self.mesh_model.gamma_fn
+        self.theta_fn, self.phi_fn, self.gamma_fn = self.mesh_model.theta_fn, self.mesh_model.phi_fn,\
+                                                    self.mesh_model.gamma_fn
         self.pairwise_perm_idx = pairwise_off_diag_permutation(self.units)
         self.perm_layers = [PermutationLayer(self.mesh_model.perm_idx[layer]) for layer in range(self.num_layers + 1)]
 
@@ -460,5 +464,4 @@ class MeshTorchLayer(TransformerLayer):
 
 
 def phasor(phase: torch.Tensor):
-    return torch.cos(phase) + 1j * torch.sin(phase)
-
+    return phase.cos() + 1j * phase.sin()

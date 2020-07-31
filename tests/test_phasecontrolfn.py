@@ -45,21 +45,21 @@ class PhaseControlTest(tf.test.TestCase):
                 with tf.GradientTape() as tape:
                     loss = complex_mse(rm(identity_matrix), target)
                 grads = tape.gradient(loss, rm.trainable_variables)
-                # t_loss = torch.nn.MSELoss(reduction='mean')
-                # rm_torch = RMTorch(
-                #     units=units,
-                #     hadamard=hadamard,
-                #     bs_error=bs_error,
-                #     theta_init=random_mask_init(rm_numpy.theta, use_torch=True)[0],
-                #     phi_init=random_mask_init(rm_numpy.phi, use_torch=True)[0],
-                #     gamma_init=rm_numpy.gamma
-                # )
-                #
-                # torch_loss = t_loss(torch.view_as_real(rm_torch(torch.eye(units, dtype=torch.cfloat))),
-                #                     torch.view_as_real(torch.as_tensor(target, dtype=torch.cfloat)))
-                # var = torch_loss.sum()
-                # var.backward()
-                # print(torch.autograd.grad(var, rm_torch.theta))
+                t_loss = torch.nn.MSELoss(reduction='mean')
+                rm_torch = RMTorch(
+                    units=units,
+                    hadamard=hadamard,
+                    bs_error=bs_error,
+                    theta_init=random_mask_init(rm_numpy.theta, use_torch=True)[0],
+                    phi_init=random_mask_init(rm_numpy.phi, use_torch=True)[0],
+                    gamma_init=rm_numpy.gamma
+                )
+
+                torch_loss = t_loss(torch.view_as_real(rm_torch(torch.eye(units, dtype=torch.cfloat))),
+                                    torch.view_as_real(torch.as_tensor(target, dtype=torch.cfloat)))
+                var = torch_loss.sum()
+                var.backward()
+                print(torch.autograd.grad(var, [rm_torch.theta]))
                 theta_grad, phi_grad = grads[0].numpy(), grads[1].numpy()
                 theta_grad_zeros = theta_grad[np.where(theta_mask == 0)]
                 phi_grad_zeros = phi_grad[np.where(phi_mask == 0)]
