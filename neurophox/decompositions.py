@@ -8,7 +8,7 @@ from .helpers import inverse_permutation
 
 
 def clements_decomposition(u: np.ndarray, pbar_handle: Callable = None) -> RMNumpy:
-    """Clements decomposition of unitary matrix :math:`U` in the form of a NumPy rectangular mesh layer
+    """Clements decomposition of unitary matrix :math:`U` to output a NumPy rectangular mesh layer
 
     Args:
         u: unitary matrix :math:`U` to be decomposed into pairwise operators.
@@ -64,6 +64,7 @@ def clements_decomposition(u: np.ndarray, pbar_handle: Callable = None) -> RMNum
     gamma = phi_checkerboard[:, 0]
     external_phases = phi_checkerboard[:, 1:]
     phi, gamma = grid_common_mode_flow(external_phases, gamma=gamma)
+    phi = checkerboard_to_param(phi, n)
 
     # for some reason, we need to adjust gamma at the end in this strange way (found via trial and error...):
     gamma_adj = np.zeros_like(gamma)
@@ -81,17 +82,26 @@ def checkerboard_to_param(checkerboard: np.ndarray, units: int):
         param[::2, :] = checkerboard.T[::2, :-1:2]
     else:
         param[::2, :] = checkerboard.T[::2, ::2]
-    if units % 2:
-        param[1::2, :] = checkerboard.T[1::2, 1::2]
-    else:
-        param[1::2, :] = checkerboard.T[1::2, 1::2]
+    param[1::2, :] = checkerboard.T[1::2, 1::2]
     return param
 
 
-def grid_common_mode_flow(external_phases: np.ndarray, gamma: np.ndarray,
-                          differential_mode: bool = False):
-    units, num_layers = external_phases.shape
+def grid_common_mode_flow(external_phases: np.ndarray, gamma: np.ndarray, basis: str = "sm"):
+    """In a grid mesh (e.g., triangular, rectangular meshes), arrange phases according to single-mode (:code:`sm`),
+       differential mode (:code:`diff`), or max-:math:`\\pi` (:code:`maxpi`, all external phase shifts are at most
+       :math:`\\pi`). This is done using a procedure called "common mode flow" where common modes are shifted
+       throughout the mesh until phases are correctly set.
 
+    Args:
+        external_phases: external phases in the grid mesh
+        gamma: input phase shifts
+        basis: single-mode (:code:`sm`), differential mode (:code:`diff`), or max-:math:`\\pi` (:code:`maxpi`)
+
+    Returns:
+        new external phases shifts and new gamma resulting
+
+    """
+    units, num_layers = external_phases.shape
     phase_shifts = np.hstack((gamma[:, np.newaxis], external_phases)).T
     new_phase_shifts = np.zeros_like(external_phases.T)
 
@@ -102,34 +112,38 @@ def grid_common_mode_flow(external_phases: np.ndarray, gamma: np.ndarray,
         # calculate phase information
         upper_phase = phase_shifts[current_layer][start_idx:end_idx][::2]
         lower_phase = phase_shifts[current_layer][start_idx:end_idx][1::2]
+        upper_phase = np.mod(upper_phase, 2 * np.pi)
+        lower_phase = np.mod(lower_phase, 2 * np.pi)
+        if basis == "sm":
+            new_phase_shifts[-i - 1][start_idx:end_idx][::2] = upper_phase - lower_phase
         # assign differential phase to the single mode layer and keep common mode layer
-        if differential_mode:
-            upper_phase = np.mod(upper_phase, 2 * np.pi)
-            lower_phase = np.mod(lower_phase, 2 * np.pi)
+        else:
             phase_diff = upper_phase - lower_phase
-            phase_common = (upper_phase + lower_phase) / 2
-            phase_common[phase_diff > np.pi] -= np.pi
-            phase_common[phase_diff < -np.pi] += np.pi
             phase_diff[phase_diff > np.pi] -= 2 * np.pi
             phase_diff[phase_diff < -np.pi] += 2 * np.pi
-            phase_shifts[current_layer][start_idx:end_idx][::2] = phase_common
-            phase_shifts[current_layer][start_idx:end_idx][1::2] = phase_common
-            new_phase_shifts[-i - 1][start_idx:end_idx][::2] = phase_diff / 2
-            new_phase_shifts[-i - 1][start_idx:end_idx][1::2] = -phase_diff / 2
-        else:
-            new_phase_shifts[-i - 1][start_idx:end_idx][::2] = upper_phase - lower_phase
-            phase_shifts[current_layer][start_idx:end_idx][::2] = lower_phase
-        # update the previous layer with the common mode calculated for the current layer
-        phase_shifts[current_layer - 1] += phase_shifts[current_layer]
+            if basis == "diff":
+                new_phase_shifts[-i - 1][start_idx:end_idx][::2] = phase_diff / 2
+                new_phase_shifts[-i - 1][start_idx:end_idx][1::2] = -phase_diff / 2
+            elif basis == "pimax":
+                new_phase_shifts[-i - 1][start_idx:end_idx][::2] = phase_diff * (phase_diff >= 0)
+                new_phase_shifts[-i - 1][start_idx:end_idx][1::2] = -phase_diff * (phase_diff < 0)
+        # update the previous layer with the common mode calculated for the current layer\
+        phase_shifts[current_layer] -= new_phase_shifts[-i - 1]
+        phase_shifts[current_layer - 1] += np.mod(phase_shifts[current_layer], 2 * np.pi)
         phase_shifts[current_layer] = 0
-
-    new_phase_shifts = np.mod(new_phase_shifts.T, 2 * np.pi)
     new_gamma = np.mod(phase_shifts[0], 2 * np.pi)
-    new_phi = checkerboard_to_param(new_phase_shifts, units)
-    return new_phi, new_gamma
+    return np.mod(new_phase_shifts.T, 2 * np.pi), new_gamma
 
 
 def parallel_nullification(np_layer):
+    """Perform parallel nullification
+
+    Args:
+        np_layer:
+
+    Returns:
+
+    """
     units, num_layers = np_layer.units, np_layer.num_layers
     nullification_set = np_layer.nullification_set
 
