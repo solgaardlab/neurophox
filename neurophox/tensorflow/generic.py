@@ -364,7 +364,7 @@ class MeshPhasesTensorflow:
         self.basis = basis
         self.phase_loss_fn = (lambda x: 0) if phase_loss_fn is None else phase_loss_fn
         self.phase_fn = lambda phase: tf.complex(tf.cos(phase), tf.sin(phase)) * (1 - _to_complex(self.phase_loss_fn(phase)))
-        self.input_phase_shift_layer = self.phase_fn(gamma)
+        self.input_phase_shift_layer = self.phase_fn(self.gamma)
         if self.theta.param.shape != self.phi.param.shape:
             raise ValueError("Internal phases (theta) and external phases (phi) need to have the same shape.")
 

@@ -33,13 +33,14 @@ class PhaseControlTest(tf.test.TestCase):
                 rm_numpy = RMNumpy(units)
                 theta_init, theta_mask = random_mask_init(rm_numpy.theta)
                 phi_init, phi_mask = random_mask_init(rm_numpy.phi)
+                gamma_init, gamma_mask = random_mask_init(rm_numpy.gamma)
                 mesh_model = RectangularMeshModel(
                     units=units,
                     hadamard=hadamard,
                     bs_error=bs_error,
                     theta_init=theta_init,
                     phi_init=phi_init,
-                    gamma_init=rm_numpy.gamma
+                    gamma_init=gamma_init
                 )
                 rm = MeshLayer(mesh_model)
                 with tf.GradientTape() as tape:
@@ -60,11 +61,13 @@ class PhaseControlTest(tf.test.TestCase):
                 # var = torch_loss.sum()
                 # var.backward()
                 # print(torch.autograd.grad(var, [rm_torch.theta]))
-                theta_grad, phi_grad = grads[0].numpy(), grads[1].numpy()
+                theta_grad, phi_grad, gamma_grad = grads[0].numpy(), grads[1].numpy(), grads[2].numpy()
                 theta_grad_zeros = theta_grad[np.where(theta_mask == 0)]
                 phi_grad_zeros = phi_grad[np.where(phi_mask == 0)]
+                gamma_grad_zeros = gamma_grad[np.where(gamma_mask == 0)]
                 self.assertAllClose(theta_grad_zeros, np.zeros_like(theta_grad_zeros))
                 self.assertAllClose(phi_grad_zeros, np.zeros_like(phi_grad_zeros))
+                self.assertAllClose(gamma_grad_zeros, np.zeros_like(gamma_grad_zeros))
 
     def test_tri_pcf(self):
         def random_mask_init(x, phase_range):
