@@ -75,61 +75,61 @@ def clements_decomposition(u: np.ndarray, pbar_handle: Callable = None) -> RMNum
 
     return RMNumpy(units=n, theta_init=theta, phi_init=phi, gamma_init=gamma)
 
-
-def reck_decomposition(u: np.ndarray, pbar_handle: Callable = None) -> RMNumpy:
-    """Reck decomposition of unitary matrix :math:`U` to output a NumPy triangular mesh layer
-
-    Args:
-        u: unitary matrix :math:`U` to be decomposed into pairwise operators.
-        pbar_handle: Useful for larger matrices
-
-    Returns:
-        The :code:`TMNumpy` layer that outputs the unitary :math:`U`
-
-    """
-    u_hat = u.T.copy()
-    n = u.shape[0]
-    # odd and even layer dimensions
-    theta_checkerboard = np.zeros_like(u, dtype=NP_FLOAT)
-    phi_checkerboard = np.zeros_like(u, dtype=NP_FLOAT)
-    phi_checkerboard = np.hstack((np.zeros((n, 1)), phi_checkerboard))
-    iterator = pbar_handle(range(n - 1)) if pbar_handle else range(n - 1)
-
-    for i in iterator:
-        for j in range(i + 1):
-            pairwise_index = i - j
-            target_row, target_col = n - j - 1, i - j
-            theta = np.arctan(np.abs(u_hat[target_row, target_col + 1] / u_hat[target_row, target_col])) * 2
-            phi = np.angle(-u_hat[target_row, target_col] / u_hat[target_row, target_col + 1])
-            mzi = BlochMZI(theta, phi, hadamard=False, dtype=np.complex128)
-            right_multiplier = mzi.givens_rotation(units=n, m=pairwise_index)
-            u_hat = u_hat @ right_multiplier.conj().T
-            theta_checkerboard[pairwise_index, -j - 1] = theta
-            phi_checkerboard[pairwise_index, -j - 1] = phi + np.pi
-
-    diag_phases = np.angle(np.diag(u_hat))
-    theta = checkerboard_to_param(np.fliplr(theta_checkerboard), n)
-    phi_checkerboard = np.fliplr(phi_checkerboard)
-    if n % 2:
-        phi_checkerboard[:, :-1] += np.fliplr(np.diag(diag_phases))
-    else:
-        phi_checkerboard[:, 1:] += np.fliplr(np.diag(diag_phases))
-        phi_checkerboard[-1, 2::2] += np.pi / 2  # neurophox layers assume pi / 2 phase shift in even layer "bounces"
-        phi_checkerboard[0, 2::2] += np.pi / 2
-
-    gamma = phi_checkerboard[:, 0]
-    external_phases = phi_checkerboard[:, 1:]
-    phi, gamma = grid_common_mode_flow(external_phases, gamma=gamma)
-    phi = checkerboard_to_param(phi, n)
-
-    # for some reason, we need to adjust gamma at the end in this strange way (found via trial and error...):
-    gamma_adj = np.zeros_like(gamma)
-    gamma_adj[1::4] = 1
-    gamma_adj[2::4] = 1
-    gamma += np.pi * (1 - gamma_adj) if (n // 2) % 2 else np.pi * gamma_adj
-    gamma = np.mod(gamma, 2 * np.pi)
-
-    return RMNumpy(units=n, theta_init=theta, phi_init=phi, gamma_init=gamma)
+#
+# def reck_decomposition(u: np.ndarray, pbar_handle: Callable = None) -> RMNumpy:
+#     """Reck decomposition of unitary matrix :math:`U` to output a NumPy triangular mesh layer
+#
+#     Args:
+#         u: unitary matrix :math:`U` to be decomposed into pairwise operators.
+#         pbar_handle: Useful for larger matrices
+#
+#     Returns:
+#         The :code:`TMNumpy` layer that outputs the unitary :math:`U`
+#
+#     """
+#     u_hat = u.T.copy()
+#     n = u.shape[0]
+#     # odd and even layer dimensions
+#     theta_checkerboard = np.zeros_like(u, dtype=NP_FLOAT)
+#     phi_checkerboard = np.zeros_like(u, dtype=NP_FLOAT)
+#     phi_checkerboard = np.hstack((np.zeros((n, 1)), phi_checkerboard))
+#     iterator = pbar_handle(range(n - 1)) if pbar_handle else range(n - 1)
+#
+#     for i in iterator:
+#         for j in range(i + 1):
+#             pairwise_index = i - j
+#             target_row, target_col = n - j - 1, i - j
+#             theta = np.arctan(np.abs(u_hat[target_row, target_col + 1] / u_hat[target_row, target_col])) * 2
+#             phi = np.angle(-u_hat[target_row, target_col] / u_hat[target_row, target_col + 1])
+#             mzi = BlochMZI(theta, phi, hadamard=False, dtype=np.complex128)
+#             right_multiplier = mzi.givens_rotation(units=n, m=pairwise_index)
+#             u_hat = u_hat @ right_multiplier.conj().T
+#             theta_checkerboard[pairwise_index, -j - 1] = theta
+#             phi_checkerboard[pairwise_index, -j - 1] = phi + np.pi
+#
+#     diag_phases = np.angle(np.diag(u_hat))
+#     theta = checkerboard_to_param(np.fliplr(theta_checkerboard), n)
+#     phi_checkerboard = np.fliplr(phi_checkerboard)
+#     if n % 2:
+#         phi_checkerboard[:, :-1] += np.fliplr(np.diag(diag_phases))
+#     else:
+#         phi_checkerboard[:, 1:] += np.fliplr(np.diag(diag_phases))
+#         phi_checkerboard[-1, 2::2] += np.pi / 2  # neurophox layers assume pi / 2 phase shift in even layer "bounces"
+#         phi_checkerboard[0, 2::2] += np.pi / 2
+#
+#     gamma = phi_checkerboard[:, 0]
+#     external_phases = phi_checkerboard[:, 1:]
+#     phi, gamma = grid_common_mode_flow(external_phases, gamma=gamma)
+#     phi = checkerboard_to_param(phi, n)
+#
+#     # for some reason, we need to adjust gamma at the end in this strange way (found via trial and error...):
+#     gamma_adj = np.zeros_like(gamma)
+#     gamma_adj[1::4] = 1
+#     gamma_adj[2::4] = 1
+#     gamma += np.pi * (1 - gamma_adj) if (n // 2) % 2 else np.pi * gamma_adj
+#     gamma = np.mod(gamma, 2 * np.pi)
+#
+#     return RMNumpy(units=n, theta_init=theta, phi_init=phi, gamma_init=gamma)
 
 
 def checkerboard_to_param(checkerboard: np.ndarray, units: int):
