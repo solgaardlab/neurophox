@@ -41,6 +41,8 @@ tensorflow>=2.0.0a
 ```
 
 Optionally, the user may install `torch>=1.7` to run the Pytorch layers.
+NOTE: PyTorch layers are currently nonfunctional as we migrate to complex PyTorch, but will be up and running once this 
+[issue](https://github.com/pytorch/pytorch/issues/53645) is resolved.
 
 ## Getting started
 

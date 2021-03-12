@@ -25,17 +25,17 @@ class RMLayerTest(tf.test.TestCase):
                 self.assertAllClose(rm.inverse_transform(rm.matrix), identity_matrix)
                 self.assertAllClose(rm.matrix.conj().T, rm.inverse_matrix)
 
-    def test_t(self):
-        for units, bs_error, hadamard in itertools.product(TEST_DIMENSIONS, (0, 0.1), (True, False)):
-            with self.subTest(units=units, bs_error=bs_error, hadamard=hadamard):
-                identity_matrix = np.eye(units, dtype=NP_COMPLEX)
-                rm = RMTorch(
-                    units=units,
-                    hadamard=hadamard,
-                    bs_error=bs_error
-                )
-                self.assertAllClose(rm.matrix().conj().T @ rm.matrix(), identity_matrix)
-                self.assertAllClose(rm.matrix().conj().T, rm.inverse_matrix())
+    # def test_t(self):
+    #     for units, bs_error, hadamard in itertools.product(TEST_DIMENSIONS, (0, 0.1), (True, False)):
+    #         with self.subTest(units=units, bs_error=bs_error, hadamard=hadamard):
+    #             identity_matrix = np.eye(units, dtype=NP_COMPLEX)
+    #             rm = RMTorch(
+    #                 units=units,
+    #                 hadamard=hadamard,
+    #                 bs_error=bs_error
+    #             )
+    #             self.assertAllClose(rm.matrix().conj().T @ rm.matrix(), identity_matrix)
+    #             self.assertAllClose(rm.matrix().conj().T, rm.inverse_matrix())
 
 
 class PRMLayerTest(tf.test.TestCase):
@@ -51,17 +51,17 @@ class PRMLayerTest(tf.test.TestCase):
                 self.assertAllClose(prm.inverse_transform(prm.matrix), identity_matrix)
                 self.assertAllClose(prm.matrix.conj().T, prm.inverse_matrix)
 
-    def test_t(self):
-        for units, bs_error, hadamard in itertools.product(TEST_DIMENSIONS, (0, 0.1), (True, False)):
-            with self.subTest(units=units, bs_error=bs_error, hadamard=hadamard):
-                identity_matrix = np.eye(units, dtype=NP_COMPLEX)
-                prm = PRMTorch(
-                    units=units,
-                    hadamard=hadamard,
-                    bs_error=bs_error
-                )
-                self.assertAllClose(prm.matrix().conj().T @ prm.matrix(), identity_matrix)
-                self.assertAllClose(prm.matrix().conj().T, prm.inverse_matrix())
+    # def test_t(self):
+    #     for units, bs_error, hadamard in itertools.product(TEST_DIMENSIONS, (0, 0.1), (True, False)):
+    #         with self.subTest(units=units, bs_error=bs_error, hadamard=hadamard):
+    #             identity_matrix = np.eye(units, dtype=NP_COMPLEX)
+    #             prm = PRMTorch(
+    #                 units=units,
+    #                 hadamard=hadamard,
+    #                 bs_error=bs_error
+    #             )
+    #             self.assertAllClose(prm.matrix().conj().T @ prm.matrix(), identity_matrix)
+    #             self.assertAllClose(prm.matrix().conj().T, prm.inverse_matrix())
 
 
 class TMLayerTest(tf.test.TestCase):
@@ -77,17 +77,17 @@ class TMLayerTest(tf.test.TestCase):
                 self.assertAllClose(tm.inverse_transform(tm.matrix), identity_matrix)
                 self.assertAllClose(tm.matrix.conj().T, tm.inverse_matrix)
 
-    def test_t(self):
-        for units, bs_error, hadamard in itertools.product(TEST_DIMENSIONS, (0, 0.1), (True, False)):
-            with self.subTest(units=units, bs_error=bs_error, hadamard=hadamard):
-                identity_matrix = np.eye(units, dtype=NP_COMPLEX)
-                tm = TMTorch(
-                    units=units,
-                    hadamard=hadamard,
-                    bs_error=bs_error
-                )
-                self.assertAllClose(tm.matrix().conj().T @ tm.matrix(), identity_matrix)
-                self.assertAllClose(tm.matrix().conj().T, tm.inverse_matrix())
+    # def test_t(self):
+    #     for units, bs_error, hadamard in itertools.product(TEST_DIMENSIONS, (0, 0.1), (True, False)):
+    #         with self.subTest(units=units, bs_error=bs_error, hadamard=hadamard):
+    #             identity_matrix = np.eye(units, dtype=NP_COMPLEX)
+    #             tm = TMTorch(
+    #                 units=units,
+    #                 hadamard=hadamard,
+    #                 bs_error=bs_error
+    #             )
+    #             self.assertAllClose(tm.matrix().conj().T @ tm.matrix(), identity_matrix)
+    #             self.assertAllClose(tm.matrix().conj().T, tm.inverse_matrix())
 
 
 class BMLayerTest(tf.test.TestCase):
@@ -103,17 +103,17 @@ class BMLayerTest(tf.test.TestCase):
                 self.assertAllClose(bm.inverse_transform(bm.matrix), identity_matrix)
                 self.assertAllClose(bm.matrix.conj().T, bm.inverse_matrix)
 
-    def test_t(self):
-        for units, bs_error, hadamard in itertools.product(TEST_DIMENSIONS, (0, 0.1), (True, False)):
-            with self.subTest(units=units, bs_error=bs_error, hadamard=hadamard):
-                identity_matrix = np.eye(2 ** units, dtype=NP_COMPLEX)
-                bm = BMTorch(
-                    num_layers=units,
-                    hadamard=hadamard,
-                    bs_error=bs_error
-                )
-                self.assertAllClose(bm.matrix().conj().T @ bm.matrix(), identity_matrix)
-                self.assertAllClose(bm.matrix().conj().T, bm.inverse_matrix())
+    # def test_t(self):
+    #     for units, bs_error, hadamard in itertools.product(TEST_DIMENSIONS, (0, 0.1), (True, False)):
+    #         with self.subTest(units=units, bs_error=bs_error, hadamard=hadamard):
+    #             identity_matrix = np.eye(2 ** units, dtype=NP_COMPLEX)
+    #             bm = BMTorch(
+    #                 num_layers=units,
+    #                 hadamard=hadamard,
+    #                 bs_error=bs_error
+    #             )
+    #             self.assertAllClose(bm.matrix().conj().T @ bm.matrix(), identity_matrix)
+    #             self.assertAllClose(bm.matrix().conj().T, bm.inverse_matrix())
 
 
 class CorrespondenceTest(tf.test.TestCase):
@@ -163,10 +163,10 @@ def test_correspondence(test_case: tf.test.TestCase, np_layer: MeshNumpyLayer):
     # set the testing to true and rebuild layer!
     np_layer._setup(testing=True)
     tf_layer = MeshLayer(np_layer.mesh.model)
-    t_layer = MeshTorchLayer(np_layer.mesh.model)
+    # t_layer = MeshTorchLayer(np_layer.mesh.model)
     test_case.assertAllClose(tf_layer.matrix, np_layer.matrix)
     test_case.assertAllClose(tf_layer.matrix.conj().T, np_layer.inverse_matrix)
-    test_case.assertAllClose(t_layer.matrix(), np_layer.matrix)
+    # test_case.assertAllClose(t_layer.matrix(), np_layer.matrix)
 
 
 if __name__ == '__main__':
