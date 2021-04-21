@@ -1,7 +1,8 @@
 import tensorflow as tf
+import numpy as np
 
 from neurophox.numpy import RMNumpy, TMNumpy, BMNumpy
-from neurophox.decompositions import parallel_nullification, clements_decomposition
+from neurophox.decompositions import parallel_nullification, clements_decomposition, reck_decomposition
 
 TEST_DIMENSIONS = [7, 8]
 TEST_LAYERS = [3, 4]
@@ -33,6 +34,14 @@ class ClementsDecompositionTest(tf.test.TestCase):
             rm = RMNumpy(units=units)
             reconstructed_rm = clements_decomposition(rm.matrix)
             self.assertAllClose(rm.matrix, reconstructed_rm.matrix)
+
+
+class ReckDecompositionTest(tf.test.TestCase):
+    def test(self):
+        for units in TEST_DIMENSIONS:
+            tm = TMNumpy(units=units)
+            nullified, _, _ = reck_decomposition(tm.matrix)
+            self.assertEqual(np.trace(np.abs(nullified)), units)
 
 
 

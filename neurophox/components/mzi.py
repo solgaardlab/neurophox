@@ -98,19 +98,28 @@ class SMMZI(MZI):
         dtype: Type-casting to use for the matrix elements
     """
 
-    def __init__(self, theta: float, phi: float, hadamard: bool,
-                 epsilon: Union[float, Tuple[float, float]] = 0.0, dtype=NP_COMPLEX):
+    def __init__(self, theta: float, phi: float, hadamard: bool, lower_theta: bool = False,
+                 lower_phi: bool = False, epsilon: Union[float, Tuple[float, float]] = 0.0, dtype=NP_COMPLEX):
         self.theta = theta
         self.phi = phi
         super(SMMZI, self).__init__(
-            internal_upper=theta,
-            internal_lower=0,
-            external_upper=phi,
-            external_lower=0,
-            epsilon=epsilon,
-            hadamard=hadamard,
-            dtype=dtype
+            internal_upper=theta if not lower_theta else 0,
+            internal_lower=theta if lower_theta else 0,
+            external_upper=phi if not lower_phi else 0,
+            external_lower=phi if lower_phi else 0,
+            epsilon=epsilon, hadamard=hadamard, dtype=dtype
         )
+
+    @classmethod
+    def nullify(cls, vector: np.ndarray, idx: int, lower_theta: bool = False, lower_phi: bool = False):
+        theta = -np.arctan2(np.abs(vector[idx]), np.abs(vector[idx + 1])) * 2
+        theta = -theta if lower_theta else theta
+        phi = np.angle(vector[idx + 1]) - np.angle(vector[idx]) + np.pi
+        phi = -phi if lower_phi else phi
+        mat = cls(theta, phi, hadamard=False,
+                  lower_theta=lower_theta, lower_phi=lower_phi).givens_rotation(vector.size, idx)
+        nullified_vector = mat @ vector
+        return nullified_vector, mat, np.mod(theta, 2 * np.pi), np.mod(phi, 2 * np.pi)
 
 
 class BlochMZI(MZI):
