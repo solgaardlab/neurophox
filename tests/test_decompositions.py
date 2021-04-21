@@ -41,7 +41,7 @@ class ReckDecompositionTest(tf.test.TestCase):
         for units in TEST_DIMENSIONS:
             tm = TMNumpy(units=units)
             nullified, _, _ = reck_decomposition(tm.matrix)
-            self.assertEqual(np.trace(np.abs(nullified)), units)
+            self.assertAllClose(np.trace(np.abs(nullified)), units)
 
 
 
